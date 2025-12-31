@@ -6,7 +6,7 @@ import matplotlib.ticker as ticker
 # ページ設定
 st.set_page_config(page_title="大梁断面算定シミュレーター", layout="wide")
 
-# 見出し
+# 見出しを携帯向けに縮小
 st.markdown("## 🏗️ 大梁断面算定シミュレーター")
 
 # --- 1. データベース ---
@@ -62,9 +62,8 @@ else:
             return (P * (L-x) * (3 * (L**2) - 4 * ((L-x)**2))) / (48 * E * I)
 
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
-ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 断面算定結果 ---
+# --- 4. 断面算定結果 (実務仕様・20mm制限) ---
 st.subheader("📋 断面算定結果")
 
 def compact_result_card(label, val_text, limit_val, is_ok):
@@ -89,7 +88,7 @@ compact_result_card("曲げ応力度検定(M): σb", f"{sigma_b:.2f} N/mm²", f"
 compact_result_card("剪断応力度検定(S): τ", f"{tau:.2f} N/mm²", f"{fs:.1f}", tau <= fs)
 compact_result_card("撓み検定(d): δ", f"{delta_max:.2f} mm", f"{l_300_limit:.1f}(1/300) かつ 20mm以下", delta_max <= 20 and delta_max <= l_300_limit)
 
-# --- 5. グラフ描画 ---
+# --- 5. グラフ描画 (大迫力数値) ---
 st.markdown("### 📊 応力・変形図")
 
 def decorate(ax, unit, y_max, y_min):
