@@ -4,113 +4,112 @@ import numpy as np
 import matplotlib.ticker as ticker
 
 # ページ設定
-st.set_page_config(page_title="木製梁のたわみ計算シミュレーター", layout="wide")
+st.set_page_config(page_title="大梁断面算定シミュレーター", layout="wide")
 
-# タイトル
-st.title("🏗️ 木製梁のたわみ計算シミュレーター")
-st.markdown("計算モードを選択して、パラメータを調整してください。")
+st.title("🏗️ 大梁断面算定シミュレーター")
+st.markdown("曲げ・せん断・たわみの3要素をピン接合（単純梁）として算定します。")
 
-# --- 1. サイドバー設定 ---
-st.sidebar.header("計算モード")
-mode = st.sidebar.radio(
-    "荷重タイプを選択",
-    ("等分布荷重 (全体)", "集中荷重 (中央)")
-)
+# --- 1. データベース（長期許容応力度: N/mm2） ---
+# 一般的な数値をプリセット。任意入力時はこれらを基準に調整可能。
+material_db = {
+    "杉 (E70)": {"E": 7000, "fb": 15.0/1.5, "fs": 1.2/1.5}, # 長期として安全側設定
+    "桧 (E90)": {"E": 9000, "fb": 17.0/1.5, "fs": 1.5/1.5},
+    "米松 (E110)": {"E": 11000, "fb": 20.0/1.5, "fs": 1.8/1.5},
+    "集成材 (E120)": {"E": 12000, "fb": 22.0/1.5, "fs": 2.0/1.5},
+    "任意入力": {"E": 7000, "fb": 15.0, "fs": 1.2}
+}
+
+# --- 2. サイドバー設定 ---
+st.sidebar.header("1. 荷重条件")
+mode = st.sidebar.radio("荷重タイプ", ("等分布荷重 (全体)", "集中荷重 (中央)"))
 
 st.sidebar.markdown("---")
-st.sidebar.header("共通パラメータ")
+st.sidebar.header("2. 材料・断面")
+selected_label = st.sidebar.selectbox("樹種選択", list(material_db.keys()))
 
-# 【修正】樹種の選択肢（任意入力を追加）
-wood_materials = {
-    "杉 (E=7000 N/mm²)": 7000,
-    "桧 (E=9000 N/mm²)": 9000,
-    "米松 (E=11000 N/mm²)": 11000,
-    "集成材 (E=12000 N/mm²)": 12000,
-    "鋼材 (E=205000 N/mm²)": 205000,
-    "任意入力 (Manual Input)": "manual"
-}
-selected_label = st.sidebar.selectbox("樹種を選択", list(wood_materials.keys()))
-
-if wood_materials[selected_label] == "manual":
-    E = st.sidebar.number_input("ヤング係数 E (N/mm²)", value=7000, step=100)
+if selected_label == "任意入力":
+    E = st.sidebar.number_input("ヤング係数 E", value=7000)
+    fb = st.sidebar.number_input("許容曲げ応力度 fb", value=10.0)
+    fs = st.sidebar.number_input("許容せん断応力度 fs", value=0.8)
 else:
-    E = wood_materials[selected_label]
+    E = material_db[selected_label]["E"]
+    fb = material_db[selected_label]["fb"]
+    fs = material_db[selected_label]["fs"]
 
-# スパン L (910から455刻みで6000まで)
 span_options = list(range(910, 6001, 455))
 L = st.sidebar.select_slider("スパン L (mm)", options=span_options, value=3640)
+b = st.sidebar.select_slider("梁幅 b (mm)", options=[105, 120, 150, 180, 210, 240, 270], value=120)
+h = st.sidebar.select_slider("梁成 h (mm)", options=[105, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510], value=240)
 
-# 梁幅 b
-width_options = [105, 120, 150, 180, 210, 240, 270]
-b = st.sidebar.select_slider("梁幅 b (mm)", options=width_options, value=120)
+# --- 3. 計算セクション ---
+Z = (b * h**2) / 6    # 断面係数
+A = b * h             # 断面積
+I = (b * h**3) / 12   # 断面二次モーメント
 
-# 梁成 h
-height_options = [105, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510]
-h = st.sidebar.select_slider("梁成 h (mm)", options=height_options, value=240)
-
-I = (b * h**3) / 12
-
-# --- 2. 計算ロジック ---
 if mode == "等分布荷重 (全体)":
-    st.sidebar.markdown("---")
-    st.sidebar.header("荷重設定 (等分布)")
-    w = st.sidebar.number_input("等分布荷重 w (N/mm)", value=5.0, step=1.0)
+    w = st.sidebar.number_input("等分布荷重 w (N/mm)", value=5.0)
+    M_max = (w * L**2) / 8
+    Q_max = (w * L) / 2
     delta_max = (5 * w * L**4) / (384 * E * I)
-    def get_deflection(x):
-        return (w * x * (L**3 - 2*L*x**2 + x**3)) / (24 * E * I)
+    def get_delta(x): return (w * x * (L**3 - 2*L*x**2 + x**3)) / (24 * E * I)
     load_desc = f"w={w}N/mm"
 else:
-    st.sidebar.markdown("---")
-    st.sidebar.header("荷重設定 (集中)")
-    P = st.sidebar.number_input("集中荷重 P (N)", value=18200.0, step=100.0)
+    P = st.sidebar.number_input("集中荷重 P (N)", value=18200.0)
+    M_max = (P * L) / 4
+    Q_max = P / 2
     delta_max = (P * L**3) / (48 * E * I)
-    def get_deflection(x):
-        if x <= L/2:
-            return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I)
-        else:
-            x_mirror = L - x
-            return (P * x_mirror * (3*L**2 - 4*x_mirror**2)) / (48 * E * I)
+    def get_delta(x): 
+        return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*L**2 - 4*(L-x)**2)) / (48 * E * I)
     load_desc = f"P={P}N"
 
-# --- 3. 結果表示 ---
-st.subheader(f"計算結果: {mode}")
+# 応力度計算
+sigma_b = M_max / Z
+tau = (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
-is_ok = delta_max <= (L / 300)
 
-c1, c2, c3 = st.columns(3)
-c1.metric("最大たわみ (δmax)", f"{delta_max:.2f} mm")
-c2.metric("たわみ比 (1/n)", f"1/{ratio}" if delta_max > 0 else "-")
-if is_ok:
-    c3.success("判定: OK (1/300 クリア)")
-else:
-    c3.error("判定: NG (1/300 オーバー)")
+# --- 4. 結果表示 ---
+st.subheader("📋 断面算定結果")
+col1, col2, col3 = st.columns(3)
 
-# --- 4. グラフ描画 ---
-st.markdown("### Deflection Graph")
-fig, ax = plt.subplots(figsize=(10, 3.5))
+# 曲げ判定
+with col1:
+    st.write("**【曲げ】**")
+    st.metric("曲げ応力度 σb", f"{sigma_b:.2f}")
+    if sigma_b <= fb: st.success(f"OK (≦{fb:.1f})")
+    else: st.error(f"NG (>{fb:.1f})")
+
+# せん断判定
+with col2:
+    st.write("**【せん断】**")
+    st.metric("せん断応力度 τ", f"{tau:.2f}")
+    if tau <= fs: st.success(f"OK (≦{fs:.1f})")
+    else: st.error(f"NG (>{fs:.1f})")
+
+# たわみ判定
+with col3:
+    st.write("**【たわみ】**")
+    st.metric("最大たわみ δ", f"{delta_max:.2f}")
+    if delta_max <= L/300: st.success(f"OK (1/{ratio})")
+    else: st.error(f"NG (1/{ratio})")
+
+# --- 5. グラフ描画 ---
+st.markdown("---")
+fig, ax = plt.subplots(figsize=(10, 3.2))
 x_vals = np.linspace(0, L, 100)
-y_vals = np.array([get_deflection(x) for x in x_vals])
-
+y_vals = np.array([get_delta(x) for x in x_vals])
 ax.fill_between(x_vals, y_vals, 0, color="skyblue", alpha=0.3)
-ax.plot(x_vals, y_vals, color="blue", linewidth=3, label="Deflection Curve")
-ax.plot(L/2, delta_max, "ro", markersize=8)
+ax.plot(x_vals, y_vals, color="blue", linewidth=3)
+ax.plot(L/2, delta_max, "ro")
 
-# 数値表示（文字化け回避のため英語のみ）
+# 文字化け対策
 if delta_max > 60:
     ax.text(L/2, 55, f"{delta_max:.2f}mm (Scale Out)", color="purple", ha="center", fontweight="bold")
 else:
     ax.text(L/2, delta_max + 3, f"{delta_max:.2f}mm", color="red", ha="center", fontweight="bold")
 
-# 文字化け対策ラベル
 ax.set_title(f"Span:{L}mm / {load_desc} / E:{E}", fontsize=10)
-ax.set_xlabel("Position (mm)")
-ax.set_ylabel("Deflection (mm)")
-
-# 横軸目盛りを455刻みに固定
 ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
-
 ax.grid(True, linestyle="--", alpha=0.5)
 ax.invert_yaxis()
 ax.set_ylim(60, -2)
-
 st.pyplot(fig)
