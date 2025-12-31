@@ -60,34 +60,35 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 断面算定結果 (巨大OKカード) ---
-def result_card(label, value, limit, is_ok):
+# --- 4. 断面算定結果 (元のレイアウトで文字だけ大きく) ---
+st.subheader("📋 断面算定結果")
+c1, c2, c3 = st.columns(3)
+
+def simple_ok_card(label, value, limit, is_ok):
     color = "#28a745" if is_ok else "#dc3545"
     bg_color = "#d4edda" if is_ok else "#f8d7da"
-    text_color = "#155724" if is_ok else "#721c24"
     status = "OK" if is_ok else "NG"
+    # カード全体のサイズは抑えつつ、OK/NGの文字だけを巨大に設定
     st.markdown(f"""
-        <div style="background-color: {bg_color}; border-radius: 10px; padding: 20px; text-align: center; border: 2px solid {color}; margin-bottom: 10px;">
-            <p style="margin: 0; font-size: 16px; color: {text_color}; font-weight: bold;">{label}</p>
-            <h2 style="margin: 10px 0; color: {text_color}; font-size: 28px;">{value}</h2>
-            <h1 style="margin: 0; font-size: 56px; color: {color}; font-weight: 900; line-height: 1.2;">{status}</h1>
-            <p style="margin: 5px 0 0 0; font-size: 14px; color: {text_color}; opacity: 0.8;">{limit}</p>
+        <div style="background-color: {bg_color}; border-radius: 8px; padding: 10px; text-align: center; border: 1px solid {color};">
+            <div style="font-size: 14px; color: #333; font-weight: bold;">{label}</div>
+            <div style="font-size: 20px; font-weight: bold; margin: 2px 0;">{value}</div>
+            <div style="font-size: 40px; font-weight: 900; color: {color}; line-height: 1;">{status}</div>
+            <div style="font-size: 12px; color: #666;">{limit}</div>
         </div>
     """, unsafe_allow_html=True)
 
-st.subheader("📋 断面算定結果")
-c1, c2, c3 = st.columns(3)
 with c1:
-    result_card("曲げ応力度検定", f"{sigma_b:.2f} N/mm²", f"(≦{fb:.1f})", sigma_b <= fb)
+    simple_ok_card("曲げ応力度検定", f"{sigma_b:.2f} N/mm²", f"(≦{fb:.1f})", sigma_b <= fb)
 with c2:
-    result_card("せん断応力度検定", f"{tau:.2f} N/mm²", f"(≦{fs:.1f})", tau <= fs)
+    simple_ok_card("せん断応力度検定", f"{tau:.2f} N/mm²", f"(≦{fs:.1f})", tau <= fs)
 with c3:
-    result_card("撓み検定", f"{delta_max:.2f} mm", f"(1/{ratio})", delta_max <= L/300)
+    simple_ok_card("撓み検定", f"{delta_max:.2f} mm", f"(1/{ratio})", delta_max <= L/300)
 
-# --- 5. グラフ描画 ---
+# --- 5. グラフ描画 (固定スケール・右下がりS図) ---
 st.markdown("### 📊 応力・変形図")
 
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 9.5))
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 8.5))
 plt.subplots_adjust(hspace=0.6)
 
 # M図: 20固定
@@ -115,22 +116,4 @@ ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
 ax_s.set_ylim(-20, 20) 
 ax_s.text(0, (Q_max/1000), f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
-ax_s.text(L, (-Q_max/1000), f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
-
-# d図: 30固定
-ax_d.xaxis.set_major_locator(ticker.MultipleLocator(455))
-ax_d.grid(True, linestyle="--", alpha=0.3)
-ax_d.plot([0, L], [0, 0], 'k-', linewidth=1.5)
-ax_d.plot(0, 0, '^k', markersize=10)
-ax_d.plot(L, 0, '^k', markersize=10)
-ax_d.set_title("d (mm)", loc='left', fontsize=12, fontweight='bold')
-ax_d.set_xlim(-150, L + 150)
-y_d_plot = np.array([get_delta(x) for x in x_vals])
-ax_d.fill_between(x_vals, y_d_plot, 0, color="skyblue", alpha=0.15)
-ax_d.plot(x_vals, y_d_plot, color="blue", linewidth=3.0)
-ax_d.set_ylim(30, -5) 
-ax_d.text(L/2, (delta_max + 1.0), f"d={delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
-ax_d.set_xlabel("Position (mm)", fontsize=11)
-
-# 【最終命令】グラフを確実に表示させる
-st.pyplot(fig)
+ax_s.text(L, (-Q_max/1
