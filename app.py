@@ -60,7 +60,7 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 断面算定結果 (初期の横並び + OKを大きく) ---
+# --- 4. 断面算定結果 (バランス調整版) ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
 
@@ -71,58 +71,60 @@ def simple_ok_card(label, value, limit, is_ok):
     st.markdown(f"""
         <div style="background-color: {bg_color}; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid {color};">
             <div style="font-size: 14px; color: #333; font-weight: bold;">{label}</div>
-            <div style="font-size: 18px; font-weight: bold; color: #333;">{value}</div>
-            <div style="font-size: 44px; font-weight: 900; color: {color}; line-height: 1.1; margin: 5px 0;">{status}</div>
-            <div style="font-size: 12px; color: #666;">{limit}</div>
+            <div style="font-size: 20px; font-weight: bold; color: #000; margin: 4px 0;">{value}</div>
+            <div style="font-size: 18px; font-weight: bold; color: #555;">{limit}</div>
+            <div style="font-size: 44px; font-weight: 900; color: {color}; line-height: 1.0; margin-top: 8px;">{status}</div>
         </div>
     """, unsafe_allow_html=True)
 
 with c1:
-    simple_ok_card("曲げ(M): σb", f"{sigma_b:.2f} N/mm²", f"(≦{fb:.1f})", sigma_b <= fb)
+    simple_ok_card("曲げ(M): σb", f"{sigma_b:.2f} N/mm²", f"≦ {fb:.1f}", sigma_b <= fb)
 with c2:
-    simple_ok_card("せん断(S): τ", f"{tau:.2f} N/mm²", f"(≦{fs:.1f})", tau <= fs)
+    simple_ok_card("せん断(S): τ", f"{tau:.2f} N/mm²", f"≦ {fs:.1f}", tau <= fs)
 with c3:
-    simple_ok_card("たわみ(d): δ", f"{delta_max:.2f} mm", f"(1/{ratio})", delta_max <= L/300)
+    simple_ok_card("たわみ(d): δ", f"{delta_max:.2f} mm", f"≦ {L/300:.1f} (1/300)", delta_max <= L/300)
 
-# --- 5. グラフ描画 (3つの独立した図) ---
+# --- 5. グラフ描画 (独立3図・名称明記) ---
 st.markdown("### 📊 応力・変形図")
 
-def decorate(ax, label_text, unit):
+def decorate(ax, unit):
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
     ax.grid(True, linestyle="--", alpha=0.3)
     ax.plot([0, L], [0, 0], 'k-', linewidth=1.5)
     ax.plot(0, 0, '^k', markersize=10)
     ax.plot(L, 0, '^k', markersize=10)
-    ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=12, fontweight='bold')
     ax.set_xlim(-150, L + 150)
-    ax.tick_params(axis='both', labelsize=10)
+    ax.set_ylabel(unit, fontsize=10)
 
-# M図
+# 1. 曲げモーメント図
+st.markdown("#### ■ 曲げモーメント図 (M)")
 fig_m, ax_m = plt.subplots(figsize=(10, 2.5))
-decorate(ax_m, "M", "kN-m")
+decorate(ax_m, "kN-m")
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
 ax_m.set_ylim(20, -5) 
-ax_m.text(L/2, (M_max/1e6) + 0.5, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
+ax_m.text(L/2, (M_max/1e6) + 0.8, f"Mmax = {M_max/1e6:.2f}", color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
 st.pyplot(fig_m)
 
-# S図
+# 2. せん断力図
+st.markdown("#### ■ せん断力図 (S)")
 fig_s, ax_s = plt.subplots(figsize=(10, 2.5))
-decorate(ax_s, "S", "kN")
+decorate(ax_s, "kN")
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
 ax_s.set_ylim(-20, 20) 
-ax_s.text(0, (Q_max/1000), f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
-ax_s.text(L, (-Q_max/1000), f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
+ax_s.text(0, (Q_max/1000) + 1, f"S = {Q_max/1000:.1f}", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
+ax_s.text(L, (-Q_max/1000) - 1, f"S = {-Q_max/1000:.1f}", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
 st.pyplot(fig_s)
 
-# d図
+# 3. たわみ図
+st.markdown("#### ■ たわみ図 (d)")
 fig_d, ax_d = plt.subplots(figsize=(10, 2.5))
-decorate(ax_d, "d", "mm")
+decorate(ax_d, "mm")
 y_d_plot = np.array([get_delta(x) for x in x_vals])
 ax_d.fill_between(x_vals, y_d_plot, 0, color="skyblue", alpha=0.15)
 ax_d.plot(x_vals, y_d_plot, color="blue", linewidth=3.0)
 ax_d.set_ylim(30, -5) 
-ax_d.text(L/2, (delta_max + 1.0), f"d={delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
+ax_d.text(L/2, (delta_max + 1.5), f"δmax = {delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
 ax_d.set_xlabel("Position (mm)", fontsize=11)
 st.pyplot(fig_d)
