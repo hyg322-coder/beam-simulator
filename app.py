@@ -90,20 +90,20 @@ def decorate(ax, label_text, unit):
     ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=12, fontweight='bold')
     ax.set_xlim(-150, L + 150)
 
-# M図: Y軸20固定、文字を「線のすぐ上」へ
+# M図: Y軸20固定、下に凸
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
 decorate(ax_m, "M", "kN-m")
-ax_m.set_ylim(20, -5) # 下向きを正とする(20が下)
-ax_m.text(L/2, M_max/1e6 + 0.3, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
+ax_m.set_ylim(20, -5) # 下が20、上が-5
+ax_m.text(L/2, M_max/1e6 + 0.5, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
           color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
 
-# S図: Y軸20固定、右下がりに修正
+# S図: Y軸20固定、右下がりに固定
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
 decorate(ax_s, "S", "kN")
-ax_s.set_ylim(-20, 20) # 数学的な正負（上がプラス、下がマイナス）に固定
-ax_s.invert_yaxis() # 軸を反転させて、左端(プラス)が上に来る右下がりに強制
+# 重要：第1引数(ボトム)を-20、第2引数(トップ)を20にすることで、左端(正)が上、右端(負)が下になる
+ax_s.set_ylim(-20, 20) 
 ax_s.text(0, Q_max/1000, f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
 ax_s.text(L, -Q_max/1000, f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
 
@@ -112,8 +112,8 @@ y_d = np.array([get_delta(x) for x in x_vals])
 ax_d.fill_between(x_vals, y_d, 0, color="skyblue", alpha=0.15)
 ax_d.plot(x_vals, y_d, color="blue", linewidth=3.0)
 decorate(ax_d, "d", "mm")
-ax_d.set_ylim(30, -5) # 下向きを正とする(30が下)
-ax_d.text(L/2, delta_max + 0.5, f"d={delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
+ax_d.set_ylim(30, -5) # 下が30、上が-5
+ax_d.text(L/2, delta_max + 1.0, f"d={delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
 
 ax_d.set_xlabel("Position (mm)", fontsize=11)
 st.pyplot(fig)
