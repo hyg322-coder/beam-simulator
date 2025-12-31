@@ -35,7 +35,7 @@ else:
 L = st.sidebar.slider("スパン L (mm)", min_value=1820, max_value=7280, value=3640, step=910)
 b = st.sidebar.slider("梁幅 b (mm)", min_value=105, max_value=240, value=120, step=15)
 h = st.sidebar.slider("梁成 h (mm)", min_value=105, max_value=450, value=240, step=15)
-w = st.sidebar.number_input("等分布荷重 w (N/mm)", value=15.0, step=1.0)
+w = st.sidebar.number_input("等分布荷重 w (N/mm)", value=5.0, step=1.0)
 
 # --- 3. 計算実行 (ここが消えていました！) ---
 # 断面二次モーメント I
