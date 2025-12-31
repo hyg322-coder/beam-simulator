@@ -30,7 +30,8 @@ if selected_label == "任意入力":
     fb = st.sidebar.number_input("fb (N/mm²)", value=10.0)
     fs = st.sidebar.number_input("fs (N/mm²)", value=0.8)
 else:
-    E, fb, fs = material_db[selected_label]["E"], material_db[selected_label]["fb"], material_db[selected_label]["fs"]
+    item = material_db[selected_label]
+    E, fb, fs = item["E"], item["fb"], item["fs"]
 
 L = st.sidebar.select_slider("L (mm)", options=list(range(910, 6001, 455)), value=3640)
 b = st.sidebar.select_slider("b (mm)", options=[105, 120, 150, 180, 210, 240, 270], value=120)
@@ -59,31 +60,25 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 結果表示（バグ回避のため直接表示形式に変更） ---
+# --- 4. 結果表示（バグ回避のためif文で直接実行） ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
 with c1:
     st.metric("曲げ (M) : σb", f"{sigma_b:.2f} N/mm²")
-    if sigma_b <= fb:
-        st.success(f"OK (≦{fb:.1f})")
-    else:
-        st.error("NG")
+    if sigma_b <= fb: st.success(f"OK (≦{fb:.1f})")
+    else: st.error("NG")
 with c2:
     st.metric("せん断 (S) : τ", f"{tau:.2f} N/mm²")
-    if tau <= fs:
-        st.success(f"OK (≦{fs:.1f})")
-    else:
-        st.error("NG")
+    if tau <= fs: st.success(f"OK (≦{fs:.1f})")
+    else: st.error("NG")
 with c3:
     st.metric("たわみ (d) : δ", f"{delta_max:.2f} mm")
-    if delta_max <= L/300:
-        st.success(f"OK (1/{ratio})")
-    else:
-        st.error("NG")
+    if delta_max <= L/300: st.success(f"OK (1/{ratio})")
+    else: st.error("NG")
 
-# --- 5. グラフ描画 (縦3.8) ---
+# --- 5. グラフ描画 ---
 st.markdown("### 📊 応力・変形図")
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 3.8))
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 4.0))
 plt.subplots_adjust(hspace=1.5)
 
 def decorate(ax, label_text, unit):
@@ -101,11 +96,11 @@ ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=1.5)
 decorate(ax_m, "M", "kN-m")
 ax_m.invert_yaxis()
-# 【文字位置調整】最大曲げの少し上（基線側）に配置
-ax_m.text(L/2, M_max/1e6 - 0.2, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
+# 【文字位置：絶妙調整】最大値M_maxのすぐ上（基線側）に配置
+ax_m.text(L/2, M_max/1e6 - 0.15, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
           color="forestgreen", ha="center", va="top", fontsize=7, fontweight='bold')
 
-# S図: 左プラス・右マイナスの右下がり
+# S図: 左プラス(上)・右マイナスの右下がり
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=1.5)
 lim_s = max(abs(Q_max/1000) * 1.6, 5)
@@ -125,5 +120,5 @@ ax_d.text(L/2, delta_max, f"d={delta_max:.1f}", color="blue", ha="center", va="t
 
 ax_d.set_xlabel("Position (mm)", fontsize=8)
 
-# 重要：最後に必ず描画実行
+# グラフを確実に描画
 st.pyplot(fig)
