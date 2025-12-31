@@ -1,97 +1,127 @@
 import streamlit as st
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 # ページ設定
-st.set_page_config(page_title="梁たわみシミュレーター", layout="wide")
+st.set_page_config(page_title="木製梁のたわみ計算シミュレーター", layout="wide")
 
-# --- タイトルと説明 ---
+# タイトル
 st.title("🏗️ 木製梁のたわみ計算シミュレーター")
-st.markdown("""
-単純梁に等分布荷重がかかった場合のたわみをリアルタイムで計算・可視化します。
-スライダーを動かして、断面寸法やスパンによる挙動の変化を確認してください。
-""")
+st.markdown("計算モードを選択して、パラメータを調整してください。")
 
-# --- サイドバー：パラメータ入力 ---
-st.sidebar.header("パラメータ設定")
+# --- 1. サイドバー：共通設定 & モード選択 ---
+st.sidebar.header("計算モード")
+mode = st.sidebar.radio(
+    "荷重タイプを選択",
+    ("等分布荷重 (全体)", "集中荷重 (中央)")
+)
 
-# 1. 樹種とヤング係数
+st.sidebar.markdown("---")
+st.sidebar.header("共通パラメータ")
+
+# 樹種の選択
 wood_materials = {
     "杉 (E=7000 N/mm²)": 7000,
     "桧 (E=9000 N/mm²)": 9000,
-    "松 (E=10000 N/mm²)": 10000,
-    "ベイマツ (E=12000 N/mm²)": 12000,
-    "カスタム設定": 0
+    "米松 (E=11000 N/mm²)": 11000,
+    "集成材 (E=12000 N/mm²)": 12000,
+    "鋼材 (E=205000 N/mm²)": 205000
 }
 selected_material = st.sidebar.selectbox("樹種を選択", list(wood_materials.keys()))
+E = wood_materials[selected_material]
 
-if selected_material == "カスタム設定":
-    E = st.sidebar.number_input("ヤング係数 E (N/mm²)", value=8000, step=500)
+# スパン L, 梁幅 b, 梁成 h
+L = st.sidebar.slider("スパン L (mm)", 1000, 6000, 3640, 10)
+b = st.sidebar.slider("梁幅 b (mm)", 105, 120, 120, 15)
+h = st.sidebar.slider("梁成 h (mm)", 105, 450, 240, 15)
+
+# 断面二次モーメント I (共通)
+I = (b * h**3) / 12
+
+
+# --- 2. 計算ロジック（モード分岐） ---
+
+if mode == "等分布荷重 (全体)":
+    st.sidebar.markdown("---")
+    st.sidebar.header("荷重設定 (等分布)")
+    # 等分布荷重 w
+    w = st.sidebar.number_input("等分布荷重 w (N/mm)", value=5.0, step=1.0)
+    
+    # 公式: 5wL^4 / 384EI
+    delta_max = (5 * w * L**4) / (384 * E * I)
+    
+    # グラフ用関数 (4次曲線)
+    def get_deflection(x):
+        return (w * x * (L**3 - 2*L*x**2 + x**3)) / (24 * E * I)
+        
+    load_desc = f"等分布荷重 w = {w} N/mm"
+
+else: # 集中荷重 (中央)
+    st.sidebar.markdown("---")
+    st.sidebar.header("荷重設定 (集中)")
+    # 集中荷重 P
+    P = st.sidebar.number_input("集中荷重 P (N)", value=3000.0, step=100.0)
+    
+    # 公式: PL^3 / 48EI
+    delta_max = (P * L**3) / (48 * E * I)
+    
+    # グラフ用関数 (3次曲線)
+    def get_deflection(x):
+        if x <= L/2:
+            return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I)
+        else:
+            x_mirror = L - x
+            return (P * x_mirror * (3*L**2 - 4*x_mirror**2)) / (48 * E * I)
+            
+    load_desc = f"集中荷重 P = {P} N"
+
+
+# --- 3. 結果表示 ---
+st.subheader(f"結果表示: {mode}")
+
+# たわみ比 & 判定
+if delta_max > 0:
+    ratio = int(L / delta_max)
 else:
-    E = wood_materials[selected_material]
-    st.sidebar.text(f"E = {E} N/mm²")
+    ratio = 0
+limit = L / 300
+is_ok = delta_max <= limit
 
-# 2. 寸法と荷重
-L = st.sidebar.slider("スパン L (mm)", min_value=1820, max_value=7280, value=3640, step=910)
-b = st.sidebar.slider("梁幅 b (mm)", min_value=105, max_value=240, value=120, step=15)
-h = st.sidebar.slider("梁成 h (mm)", min_value=105, max_value=450, value=240, step=15)
-w = st.sidebar.number_input("等分布荷重 w (N/mm)", value=5.0, step=1.0)
-
-# --- 3. 計算実行 (ここが消えていました！) ---
-# 断面二次モーメント I
-I = b * h**3 / 12
-
-# 最大たわみ δmax (mm)
-delta_max = (5 * w * L**4) / (384 * E * I)
-
-# たわみ曲線 y(x) の計算
-x = np.linspace(0, L, 100)
-y = - (w * x / (24 * E * I)) * (L**3 - 2*L * x**2 + x**3)
-
-# 判定 (1/300)
-allowable_deflection = L / 300
-if delta_max <= allowable_deflection:
-    result_text = "OK (1/300 クリア)"
-    result_color = "success"
-else:
-    result_text = "NG (1/300 オーバー)"
-    result_color = "error"
-
-# --- 結果表示 ---
+# メトリクス表示
 c1, c2, c3 = st.columns(3)
 c1.metric("最大たわみ (δmax)", f"{delta_max:.2f} mm")
-c2.metric("たわみ比 (1/n)", f"1/{int(L/delta_max)}")
+c2.metric("たわみ比 (1/n)", f"1/{ratio}" if delta_max > 0 else "-")
 
-if result_color == "success":
-    c3.success(f"判定: {result_text}")
+if is_ok:
+    c3.success("判定: OK (1/300 クリア)")
 else:
-    c3.error(f"判定: {result_text}")
+    c3.error("判定: NG (1/300 オーバー)")
 
-# --- 4. グラフ描画 (英語表記＆Y軸調整版) ---
-st.subheader("Deflection Graph")
+
+# --- 4. グラフ描画 ---
+st.markdown("### Deflection Graph")
 
 fig, ax = plt.subplots(figsize=(10, 3.5))
+x_vals = np.linspace(0, L, 100)
 
-# グラフのプロット
-ax.plot(x, y, label="Deflection Curve", color="blue", linewidth=3)
-ax.fill_between(x, y, 0, color="skyblue", alpha=0.3)
+# ベクトル化せずにリスト内包表記で計算（集中荷重の条件分岐に対応するため）
+y_vals = np.array([-get_deflection(x) for x in x_vals])
 
-# タイトルと軸ラベル (文字化け対策で英語)
-ax.set_title(f"Span: {L}mm / Section: {b}x{h}mm / E: {E} N/mm2", fontsize=14)
-ax.set_xlabel("Position (mm)", fontsize=12)
-ax.set_ylabel("Deflection (mm)", fontsize=12)
+# 塗りつぶし & 線
+ax.fill_between(x_vals, y_vals, 0, color="skyblue", alpha=0.3)
+ax.plot(x_vals, y_vals, color="blue", linewidth=3, label=mode)
 
-# Y軸の範囲設定 (たわみが小さくても見やすく調整)
-current_limit = -delta_max * 1.5
-view_limit = min(-25, current_limit) # 最低でも-25mmまでは表示
-ax.set_ylim(view_limit, 5)
+# 最大点のプロット
+ax.plot(L/2, -delta_max, "ro", markersize=8)
+ax.text(L/2, -delta_max - (delta_max*0.1) - 1, f"{delta_max:.2f}mm", 
+        color="red", ha="center", fontweight="bold")
 
-# グリッドと凡例
-ax.grid(True, linestyle="--", alpha=0.6)
-ax.legend()
-
-# 最大たわみ位置のプロット
-ax.plot(L/2, -delta_max, "ro")
-ax.text(L/2, -delta_max - (abs(view_limit)*0.05), f"{delta_max:.2f}mm", color="red", ha="center", fontsize=12, fontweight="bold")
+# 装飾
+ax.set_title(f"Span: {L}mm / {load_desc} / {selected_material}", fontsize=12)
+ax.set_xlabel("Position (mm)")
+ax.set_ylabel("Deflection (mm)")
+ax.grid(True, linestyle="--", alpha=0.7)
+ax.legend(loc="upper right")
+ax.invert_yaxis()
 
 st.pyplot(fig)
