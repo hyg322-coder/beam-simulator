@@ -44,22 +44,24 @@ x_vals = np.linspace(0, L, 100)
 if mode == "等分布荷重 (全体)":
     w = st.sidebar.number_input("等分布荷重 w (N/mm)", value=5.0)
     M_max, Q_max = (w * L**2) / 8, (w * L) / 2
-    s_diag = (w * L / 2) - (w * x_vals)  # せん断力の分布
     m_diag = (w * x_vals / 2) * (L - x_vals)
+    # 【完全修正】せん断力図の計算式：端部で Q_max, 中央で 0
+    s_diag = (w * L / 2) - (w * x_vals)
     delta_max = (5 * w * L**4) / (384 * E * I)
     def get_delta(x): return (w * x * (L**3 - 2*L*x**2 + x**3)) / (24 * E * I)
 else:
     P = st.sidebar.number_input("集中荷重 P (N)", value=18200.0)
     M_max, Q_max = (P * L) / 4, P / 2
-    s_diag = np.where(x_vals < L/2, P/2, -P/2)
     m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/2)
+    # 【完全修正】せん断力図の計算式：±P/2
+    s_diag = np.where(x_vals < L/2, P/2, -P/2)
     delta_max = (P * L**3) / (48 * E * I)
     def get_delta(x): return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*L**2 - 4*(L-x)**2)) / (48 * E * I)
 
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 結果表示 ---
+# --- 4. 結果表示（曲げ→せん断→たわみ の順） ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
 
@@ -78,41 +80,40 @@ with c3:
     if delta_max <= L/300: st.success(f"OK (1/{ratio})")
     else: st.error(f"NG (1/{ratio})")
 
-# --- 5. グラフ描画 ---
+# --- 5. グラフ描画 (曲げM図 → せん断S図 → たわみδ図 の順) ---
 st.markdown("---")
 st.markdown("### 📊 応力・変形図")
-# 縦サイズをさらに縮小 (6.5 -> 5.5)
-fig, (ax_s, ax_m, ax_d) = plt.subplots(3, 1, figsize=(10, 5.5), sharex=True)
-plt.subplots_adjust(hspace=0.7)
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 5.5), sharex=True)
+plt.subplots_adjust(hspace=0.8)
 
-# S図 (値をkNに変換。反力Q=wL/2に修正済み)
-ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.3)
-ax_s.plot(x_vals, s_diag/1000, color="darkorange")
-ax_s.set_ylabel("S (kN)", fontsize=8)
-ax_s.set_title("Shear Force Diagram", loc='left', fontsize=9)
-ax_s.grid(True, linestyle="--", alpha=0.4)
-
-# M図 (単位kN･m、下に凸)
+# 1. M図 (曲げモーメント：下に凸)
 ax_m.fill_between(x_vals, m_diag/1000000, 0, color="green", alpha=0.3)
 ax_m.plot(x_vals, m_diag/1000000, color="forestgreen")
 ax_m.set_ylabel("M (kN-m)", fontsize=8)
-ax_m.set_title("Bending Moment Diagram", loc='left', fontsize=9)
+ax_m.set_title("Bending Moment Diagram (M)", loc='left', fontsize=9)
 ax_m.invert_yaxis() 
 ax_m.grid(True, linestyle="--", alpha=0.4)
 
-# たわみ図
+# 2. S図 (せん断力：kN表示。計算式を修正済み)
+ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.3)
+ax_s.plot(x_vals, s_diag/1000, color="darkorange")
+ax_s.set_ylabel("S (kN)", fontsize=8)
+ax_s.set_title("Shear Force Diagram (S)", loc='left', fontsize=9)
+ax_s.grid(True, linestyle="--", alpha=0.4)
+
+# 3. δ図 (たわみ)
 y_delta = np.array([get_delta(x) for x in x_vals])
 ax_d.fill_between(x_vals, y_delta, 0, color="skyblue", alpha=0.3)
 ax_d.plot(x_vals, y_delta, color="blue", linewidth=2)
 ax_d.set_ylabel("δ (mm)", fontsize=8)
-ax_d.set_title("Deflection Curve", loc='left', fontsize=9)
+ax_d.set_title("Deflection Curve (δ)", loc='left', fontsize=9)
 ax_d.invert_yaxis()
 ax_d.set_ylim(60, -2)
 ax_d.grid(True, linestyle="--", alpha=0.4)
 
 # 共通設定
 ax_d.set_xlabel("Position (mm)")
-for ax in [ax_s, ax_m, ax_d]:
+for ax in [ax_m, ax_s, ax_d]:
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
     ax.tick_params(axis='both', which='major', labelsize=8)
 
