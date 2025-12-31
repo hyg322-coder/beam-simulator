@@ -70,7 +70,7 @@ else:
 # --- 4. グラフ描画 (英語表記＆Y軸調整版) ---
 st.subheader("Deflection Graph")
 
-fig, ax = plt.subplots(figsize=(10, 2.5))
+fig, ax = plt.subplots(figsize=(10, 1.5))
 
 # グラフのプロット
 ax.plot(x, y, label="Deflection Curve", color="blue", linewidth=3)
