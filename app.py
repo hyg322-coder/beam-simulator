@@ -27,7 +27,9 @@ st.sidebar.header("2. 材料・断面")
 selected_label = st.sidebar.selectbox("樹種選択", list(material_db.keys()))
 
 if selected_label == "任意入力":
-    E, fb, fs = st.sidebar.number_input("E", 7000), st.sidebar.number_input("fb", 10.0), st.sidebar.number_input("fs", 0.8)
+    E = st.sidebar.number_input("E", value=7000)
+    fb = st.sidebar.number_input("fb", value=10.0)
+    fs = st.sidebar.number_input("fs", value=0.8)
 else:
     E, fb, fs = material_db[selected_label]["E"], material_db[selected_label]["fb"], material_db[selected_label]["fs"]
 
@@ -49,4 +51,7 @@ if mode == "等分布荷重 (全体)":
 else:
     P = st.sidebar.number_input("P (N)", value=18200.0)
     M_max, Q_max = (P * L) / 4, P / 2
-    m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/
+    m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/2)
+    s_diag = np.where(x_vals < L/2, P/2, -P/2)
+    delta_max = (P * (L**3)) / (48 * E * I)
+    def get_delta(x): return (P * x * (3*(L**2) - 4*(x**2))) / (48 *
