@@ -52,4 +52,40 @@ else:
     M_max, Q_max = (P * L) / 4, P / 2
     m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/2)
     s_diag = np.where(x_vals < L/2, P/2, -P/2)
-    delta_max = (P * L**3
+    delta_max = (P * L**3) / (48 * E * I) # エラー箇所を確実に修正
+    def get_delta(x): 
+        return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*L**2 - 4*(L-x)**2)) / (48 * E * I)
+
+sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
+ratio = int(L / delta_max) if delta_max > 0 else 0
+
+# --- 4. 断面算定結果 ---
+st.subheader("📋 断面算定結果")
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.markdown("**曲げ応力度検定**")
+    st.metric("", f"{sigma_b:.2f} N/mm²")
+    if sigma_b <= fb: st.success(f"OK (≦{fb:.1f})")
+    else: st.error("NG")
+with c2:
+    st.markdown("**せん断応力度検定**")
+    st.metric("", f"{tau:.2f} N/mm²")
+    if tau <= fs: st.success(f"OK (≦{fs:.1f})")
+    else: st.error("NG")
+with c3:
+    st.markdown("**撓み検定**")
+    st.metric("", f"{delta_max:.2f} mm")
+    if delta_max <= L/300: st.success(f"OK (1/{ratio})")
+    else: st.error("NG")
+
+# --- 5. グラフ描画 ---
+st.markdown("### 📊 応力・変形図")
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 8.5))
+plt.subplots_adjust(hspace=0.6)
+
+def decorate(ax, label_text, unit):
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
+    ax.tick_params(axis='both', labelsize=10)
+    ax.grid(True, linestyle="--", alpha=0.3)
+    ax.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+    ax.
