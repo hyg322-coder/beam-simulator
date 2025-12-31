@@ -6,7 +6,7 @@ import matplotlib.ticker as ticker
 # ページ設定
 st.set_page_config(page_title="大梁断面算定シミュレーター", layout="wide")
 
-# 見出しを携帯向けに小さく調整
+# 見出しを携帯向けに縮小
 st.markdown("## 🏗️ 大梁断面算定シミュレーター")
 
 # --- 1. データベース ---
@@ -46,14 +46,4 @@ if mode == "等分布荷重 (全体)":
     M_max, Q_max = (w * L**2) / 8, (w * L) / 2
     m_diag = (w * x_vals / 2) * (L - x_vals)
     s_diag = (w * L / 2) - (w * x_vals)
-    delta_max = (5 * w * (L**4)) / (384 * E * I)
-    def get_delta(x):
-        return (w * x * (L**3 - 2 * L * (x**2) + (x**3))) / (24 * E * I)
-else:
-    P = st.sidebar.number_input("P (N)", value=18200.0)
-    M_max, Q_max = (P * L) / 4, P / 2
-    m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/2)
-    s_diag = np.where(x_vals < L/2, P/2, -P/2)
-    delta_max = (P * (L**3)) / (48 * E * I)
-    def get_delta(x):
-        return (P * x * (3*(L**2) - 4*(x**2))) / (48 * E * I) if x <= L/2 else
+    delta_max = (5
