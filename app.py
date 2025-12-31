@@ -5,7 +5,7 @@ import numpy as np
 # ページ設定
 st.set_page_config(page_title="木製梁のたわみ計算シミュレーター", layout="wide")
 
-# タイトル（日本語）
+# タイトル
 st.title("🏗️ 木製梁のたわみ計算シミュレーター")
 st.markdown("計算モードを選択して、パラメータを調整してください。")
 
@@ -30,10 +30,17 @@ wood_materials = {
 selected_material = st.sidebar.selectbox("樹種を選択", list(wood_materials.keys()))
 E = wood_materials[selected_material]
 
-# スパン L, 梁幅 b, 梁成 h
-L = st.sidebar.slider("スパン L (mm)", 1000, 6000, 3640, 10)
-b = st.sidebar.slider("梁幅 b (mm)", 105, 120, 120, 15)
-h = st.sidebar.slider("梁成 h (mm)", 105, 450, 240, 15)
+# 【修正】スパン L (910から455刻みで6000まで)
+span_options = list(range(910, 6001, 455))
+L = st.sidebar.select_slider("スパン L (mm)", options=span_options, value=3640)
+
+# 【修正】梁幅 b (指定のサイズリスト)
+width_options = [105, 120, 150, 180, 210, 240, 270]
+b = st.sidebar.select_slider("梁幅 b (mm)", options=width_options, value=120)
+
+# 【修正】梁成 h (指定のサイズリスト)
+height_options = [105, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450]
+h = st.sidebar.select_slider("梁成 h (mm)", options=height_options, value=240)
 
 # 断面二次モーメント I
 I = (b * h**3) / 12
@@ -56,7 +63,7 @@ if mode == "等分布荷重 (全体)":
 else: # 集中荷重 (中央)
     st.sidebar.markdown("---")
     st.sidebar.header("荷重設定 (集中)")
-    # 【変更点】デフォルト値を等分布荷重5N相当（5*3640=18200）に設定
+    # デフォルト値を等分布荷重5N相当（18200）に設定
     P = st.sidebar.number_input("集中荷重 P (N)", value=18200.0, step=100.0)
     
     # 公式: PL^3 / 48EI
@@ -93,10 +100,9 @@ else:
 # --- 4. グラフ描画 ---
 st.markdown("### Deflection Graph")
 
-fig, ax = plt.subplots(figsize=(10, 3.5))
+fig, ax = plt.subplots(figsize=(10, 4.0)) # 少し高さを確保
 x_vals = np.linspace(0, L, 100)
 
-# Y軸反転で自然に下向きになるため、値はプラスのままでOK
 y_vals = np.array([get_deflection(x) for x in x_vals])
 
 # 塗りつぶし & 線
@@ -104,11 +110,26 @@ ax.fill_between(x_vals, y_vals, 0, color="skyblue", alpha=0.3)
 ax.plot(x_vals, y_vals, color="blue", linewidth=3, label="Deflection")
 
 # 最大点のプロット
+# グラフ範囲外(60mm超)にいっても、点は正しい位置（画面外）に打つ
 ax.plot(L/2, delta_max, "ro", markersize=8)
-ax.text(L/2, delta_max + (delta_max*0.1), f"{delta_max:.2f}mm", 
-        color="red", ha="center", fontweight="bold")
 
-# 装飾（グラフ内は英語のまま＝エラー回避）
+# テキスト表示：60mmを超えて画面外になる場合でも、読み取れる位置に工夫して表示するか、
+# あるいはグラフ外であることを示す矢印などをつけるのが親切ですが、
+# 今回は「撓み量は表示して」とのことなので、数値は必ず描画します。
+# ただし、y=60を超えると見えなくなるため、y=58あたりに固定表示させる処理を入れます。
+if delta_max > 60:
+    display_y = 55 # グラフ上限ギリギリに表示
+    text_content = f"{delta_max:.2f}mm (Scale Out)"
+    text_color = "purple" # 範囲外を目立たせる色
+else:
+    display_y = delta_max + 2
+    text_content = f"{delta_max:.2f}mm"
+    text_color = "red"
+
+ax.text(L/2, display_y, text_content, 
+        color=text_color, ha="center", fontweight="bold", fontsize=12)
+
+# 装飾
 ax.set_title(f"Span: {L}mm / {load_desc} / E: {E}", fontsize=12)
 ax.set_xlabel("Position (mm)")
 ax.set_ylabel("Deflection (mm)")
@@ -118,10 +139,9 @@ ax.legend(loc="upper right")
 # Y軸反転（下向きにたわむ）
 ax.invert_yaxis()
 
-# グラフ範囲の調整（画面に収める）
-if delta_max > 0:
-    ax.set_ylim(delta_max * 1.3, -1) 
-else:
-    ax.set_ylim(5, -1)
+# 【修正】グラフ範囲の固定（0〜60mm）
+# 下向きなので invert_yaxis されています。
+# set_ylim(bottom, top) ですが、反転中は (大きい値, 小さい値) で指定します。
+ax.set_ylim(60, -2) 
 
 st.pyplot(fig)
