@@ -30,8 +30,7 @@ if selected_label == "任意入力":
     fb = st.sidebar.number_input("fb (N/mm²)", value=10.0)
     fs = st.sidebar.number_input("fs (N/mm²)", value=0.8)
 else:
-    item = material_db[selected_label]
-    E, fb, fs = item["E"], item["fb"], item["fs"]
+    E, fb, fs = material_db[selected_label]["E"], material_db[selected_label]["fb"], material_db[selected_label]["fs"]
 
 L = st.sidebar.select_slider("L (mm)", options=list(range(910, 6001, 455)), value=3640)
 b = st.sidebar.select_slider("b (mm)", options=[105, 120, 150, 180, 210, 240, 270], value=120)
@@ -60,7 +59,7 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 結果表示（バグ回避のためif文で直接実行） ---
+# --- 4. 結果表示 ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
 with c1:
@@ -78,7 +77,7 @@ with c3:
 
 # --- 5. グラフ描画 ---
 st.markdown("### 📊 応力・変形図")
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 4.0))
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 4.2))
 plt.subplots_adjust(hspace=1.5)
 
 def decorate(ax, label_text, unit):
@@ -91,13 +90,13 @@ def decorate(ax, label_text, unit):
     ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=8, fontweight='bold', pad=2)
     ax.set_xlim(-100, L + 100)
 
-# M図: 下に凸(引張側) 
+# M図: 反転軸に合わせて文字位置を「曲線のすぐ上」に調整
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=1.5)
 decorate(ax_m, "M", "kN-m")
 ax_m.invert_yaxis()
-# 【文字位置：絶妙調整】最大値M_maxのすぐ上（基線側）に配置
-ax_m.text(L/2, M_max/1e6 - 0.15, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
+# va="top" とマイナスオフセットの組み合わせで、線のすぐ上に配置
+ax_m.text(L/2, (M_max/1e6) - 0.2, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
           color="forestgreen", ha="center", va="top", fontsize=7, fontweight='bold')
 
 # S図: 左プラス(上)・右マイナスの右下がり
@@ -120,5 +119,5 @@ ax_d.text(L/2, delta_max, f"d={delta_max:.1f}", color="blue", ha="center", va="t
 
 ax_d.set_xlabel("Position (mm)", fontsize=8)
 
-# グラフを確実に描画
+# グラフを確実に表示
 st.pyplot(fig)
