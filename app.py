@@ -59,38 +59,50 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 結果表示 ---
+# --- 4. 結果表示（エラー回避のためロジックを分離） ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
+
 with c1:
     st.metric("曲げ σb", f"{sigma_b:.2f} N/mm²")
-    st.success(f"OK (≦{fb:.1f})") if sigma_b <= fb else st.error(f"NG (>{fb:.1f})")
+    if sigma_b <= fb:
+        st.success(f"OK (≦{fb:.1f})")
+    else:
+        st.error(f"NG (>{fb:.1f})")
+
 with c2:
     st.metric("せん断 τ", f"{tau:.2f} N/mm²")
-    st.success(f"OK (≦{fs:.1f})") if tau <= fs else st.error(f"NG (>{fs:.1f})")
+    if tau <= fs:
+        st.success(f"OK (≦{fs:.1f})")
+    else:
+        st.error(f"NG (>{fs:.1f})")
+
 with c3:
     st.metric("最大たわみ δ", f"{delta_max:.2f} mm")
-    st.success(f"OK (1/{ratio})") if delta_max <= L/300 else st.error(f"NG (1/{ratio})")
+    if delta_max <= L/300:
+        st.success(f"OK (1/{ratio})")
+    else:
+        st.error(f"NG (1/{ratio})")
 
-# --- 5. グラフ描画 (S図・M図・たわみ図) ---
+# --- 5. グラフ描画 ---
 st.markdown("---")
-# 画面収まりのためfigsizeの縦を8→6.5に短縮
+st.markdown("### 📊 応力・変形図")
 fig, (ax_s, ax_m, ax_d) = plt.subplots(3, 1, figsize=(10, 6.5), sharex=True)
-plt.subplots_adjust(hspace=0.5)
+plt.subplots_adjust(hspace=0.6)
 
-# S図 (単位をkNに修正)
+# S図
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.3)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange")
 ax_s.set_ylabel("Shear (kN)", fontsize=9)
-ax_s.set_title("Shear Force Diagram (S)", loc='left', fontsize=10)
+ax_s.set_title("Shear Force Diagram (S)", loc='left', fontsize=9)
 ax_s.grid(True, linestyle="--", alpha=0.5)
 
-# M図 (下に凸に変更 + 単位をkN･mに修正)
+# M図（下に凸に修正：引張側）
 ax_m.fill_between(x_vals, m_diag/1000000, 0, color="green", alpha=0.3)
 ax_m.plot(x_vals, m_diag/1000000, color="forestgreen")
 ax_m.set_ylabel("Bending (kN-m)", fontsize=9)
-ax_m.set_title("Bending Moment Diagram (M)", loc='left', fontsize=10)
-ax_m.invert_yaxis() # 下に凸
+ax_m.set_title("Bending Moment Diagram (M)", loc='left', fontsize=9)
+ax_m.invert_yaxis() 
 ax_m.grid(True, linestyle="--", alpha=0.5)
 
 # たわみ図
@@ -98,12 +110,12 @@ y_delta = np.array([get_delta(x) for x in x_vals])
 ax_d.fill_between(x_vals, y_delta, 0, color="skyblue", alpha=0.3)
 ax_d.plot(x_vals, y_delta, color="blue", linewidth=2)
 ax_d.set_ylabel("Deflection (mm)", fontsize=9)
-ax_d.set_title("Deflection Curve", loc='left', fontsize=10)
+ax_d.set_title("Deflection Curve", loc='left', fontsize=9)
 ax_d.invert_yaxis()
 ax_d.set_ylim(60, -2)
 ax_d.grid(True, linestyle="--", alpha=0.5)
 
-# 共通：横軸目盛り
+# 共通設定
 ax_d.set_xlabel("Position (mm)")
 for ax in [ax_s, ax_m, ax_d]:
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
