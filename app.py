@@ -30,8 +30,7 @@ if selected_label == "任意入力":
     fb = st.sidebar.number_input("fb (N/mm²)", value=10.0)
     fs = st.sidebar.number_input("fs (N/mm²)", value=0.8)
 else:
-    item = material_db[selected_label]
-    E, fb, fs = item["E"], item["fb"], item["fs"]
+    E, fb, fs = material_db[selected_label]["E"], material_db[selected_label]["fb"], material_db[selected_label]["fs"]
 
 L = st.sidebar.select_slider("L (mm)", options=list(range(910, 6001, 455)), value=3640)
 b = st.sidebar.select_slider("b (mm)", options=[105, 120, 150, 180, 210, 240, 270], value=120)
@@ -76,47 +75,13 @@ with c3:
     if delta_max <= L/300: st.success(f"OK (1/{ratio})")
     else: st.error("NG")
 
-# --- 5. グラフ描画 (モバイル対応：縦にボリュームを出す) ---
+# --- 5. グラフ描画 (モバイル究極対応：縦に3倍のボリューム) ---
 st.markdown("### 📊 応力・変形図")
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 6.0))
-plt.subplots_adjust(hspace=1.2)
+# 全体の高さを 9.0 に引き上げ（スクロールして見せる縦長構成）
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 9.0))
+plt.subplots_adjust(hspace=0.6) # 間隔を詰め、各図の描画エリアを最大化
 
 def decorate(ax, label_text, unit):
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
-    ax.tick_params(axis='both', labelsize=8)
-    ax.grid(True, linestyle="--", alpha=0.3)
-    ax.plot([0, L], [0, 0], 'k-', linewidth=1.0)
-    ax.plot(0, 0, '^k', markersize=6)
-    ax.plot(L, 0, '^k', markersize=6)
-    ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=9, fontweight='bold')
-    ax.set_xlim(-100, L + 100)
-
-# M図: Y軸を広げ、数値を「線のすぐ上」に
-ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
-ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=2.0)
-decorate(ax_m, "M", "kN-m")
-ax_m.invert_yaxis()
-ax_m.set_ylim(max(m_diag/1e6)*1.8, -max(m_diag/1e6)*0.4) 
-ax_m.text(L/2, M_max/1e6 + 0.1, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
-          color="forestgreen", ha="center", va="bottom", fontsize=8, fontweight='bold')
-
-# S図: エラーを修正し、Y軸を広げる
-ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
-ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=2.0)
-lim_s = max(abs(Q_max/1000), 1.0) * 1.8 # エラー箇所を修正
-ax_s.set_ylim(lim_s, -lim_s) 
-decorate(ax_s, "S", "kN")
-ax_s.text(0, Q_max/1000, f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=8, fontweight='bold')
-ax_s.text(L, -Q_max/1000, f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=8, fontweight='bold')
-
-# d図: ダイナミックな曲線
-y_d = np.array([get_delta(x) for x in x_vals])
-ax_d.fill_between(x_vals, y_d, 0, color="skyblue", alpha=0.15)
-ax_d.plot(x_vals, y_d, color="blue", linewidth=2.0)
-decorate(ax_d, "d", "mm")
-ax_d.invert_yaxis()
-ax_d.set_ylim(max(y_d)*1.8, -max(y_d)*0.4) 
-ax_d.text(L/2, delta_max + 0.5, f"d={delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=9, fontweight='bold')
-
-ax_d.set_xlabel("Position (mm)", fontsize=9)
-st.pyplot(fig)
+    ax.tick_params(axis='both', labelsize=9)
+    ax.grid(True, linestyle="--
