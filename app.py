@@ -66,6 +66,7 @@ else: # 集中荷重 (中央)
     delta_max = (P * L**3) / (48 * E * I)
     
     # グラフ用関数 (3次曲線)
+    # ※Y軸反転するため、たわみ方向をプラスで計算する
     def get_deflection(x):
         if x <= L/2:
             return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I)
@@ -104,16 +105,17 @@ st.markdown("### Deflection Graph")
 fig, ax = plt.subplots(figsize=(10, 3.5))
 x_vals = np.linspace(0, L, 100)
 
-# ベクトル化せずにリスト内包表記で計算（集中荷重の条件分岐に対応するため）
-y_vals = np.array([-get_deflection(x) for x in x_vals])
+# 【修正点】マイナスをつけない（Y軸反転で自然に下向きになるため）
+y_vals = np.array([get_deflection(x) for x in x_vals])
 
 # 塗りつぶし & 線
 ax.fill_between(x_vals, y_vals, 0, color="skyblue", alpha=0.3)
 ax.plot(x_vals, y_vals, color="blue", linewidth=3, label=mode)
 
-# 最大点のプロット
-ax.plot(L/2, -delta_max, "ro", markersize=8)
-ax.text(L/2, -delta_max - (delta_max*0.1) - 1, f"{delta_max:.2f}mm", 
+# 【修正点】最大点のプロットもプラスの値で指定
+ax.plot(L/2, delta_max, "ro", markersize=8)
+# テキスト位置を調整（点の少し下へ）
+ax.text(L/2, delta_max + (delta_max*0.2), f"{delta_max:.2f}mm", 
         color="red", ha="center", fontweight="bold")
 
 # 装飾
@@ -122,6 +124,7 @@ ax.set_xlabel("Position (mm)")
 ax.set_ylabel("Deflection (mm)")
 ax.grid(True, linestyle="--", alpha=0.7)
 ax.legend(loc="upper right")
+# Y軸を反転（下がプラス＝たわみ方向）
 ax.invert_yaxis()
 
 st.pyplot(fig)
