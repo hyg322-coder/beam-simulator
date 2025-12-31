@@ -35,47 +35,54 @@ else:
 L = st.sidebar.slider("スパン L (mm)", min_value=1820, max_value=7280, value=3640, step=910)
 b = st.sidebar.slider("梁幅 b (mm)", min_value=105, max_value=240, value=120, step=15)
 h = st.sidebar.slider("梁成 h (mm)", min_value=105, max_value=450, value=240, step=15)
-w = st.sidebar.number_input("等分布荷重 w (N/mm)", value=15.0, step=1.0, help="長期荷重+積載荷重などを想定")
+w = st.sidebar.number_input("等分布荷重 w (N/mm)", value=15.0, step=1.0)
 
-# --- 計算処理 ---
-# 断面二次モーメント I = bh^3 / 12
-I = (b * h**3) / 12
-# 最大たわみ delta = (5 * w * L^4) / (384 * E * I)
+# --- 3. 計算実行 (ここが消えていました！) ---
+# 断面二次モーメント I
+I = b * h**3 / 12
+
+# 最大たわみ δmax (mm)
 delta_max = (5 * w * L**4) / (384 * E * I)
-# たわみ比 1/n
-deflection_ratio = L / delta_max if delta_max != 0 else 0
 
-# --- メインエリア：結果表示 ---
-col1, col2, col3 = st.columns(3)
+# たわみ曲線 y(x) の計算
+x = np.linspace(0, L, 100)
+y = - (w * x / (24 * E * I)) * (L**3 - 2*L * x**2 + x**3)
 
-with col1:
-    st.metric(label="最大たわみ (δmax)", value=f"{delta_max:.2f} mm")
-with col2:
-    st.metric(label="たわみ比 (1/n)", value=f"1/{deflection_ratio:.0f}")
-with col3:
-    # 判定ロジック（例: 1/300以下ならOK）
-    limit = 300
-    if deflection_ratio >= limit:
-        st.success(f"判定: OK (1/{limit} クリア)")
-    else:
-        st.error(f"判定: NG (1/{limit} オーバー)")
+# 判定 (1/300)
+allowable_deflection = L / 300
+if delta_max <= allowable_deflection:
+    result_text = "OK (1/300 クリア)"
+    result_color = "success"
+else:
+    result_text = "NG (1/300 オーバー)"
+    result_color = "error"
 
-# 4. グラフ描画
+# --- 結果表示 ---
+c1, c2, c3 = st.columns(3)
+c1.metric("最大たわみ (δmax)", f"{delta_max:.2f} mm")
+c2.metric("たわみ比 (1/n)", f"1/{int(L/delta_max)}")
+
+if result_color == "success":
+    c3.success(f"判定: {result_text}")
+else:
+    c3.error(f"判定: {result_text}")
+
+# --- 4. グラフ描画 (英語表記＆Y軸調整版) ---
 st.subheader("Deflection Graph")
 
 fig, ax = plt.subplots(figsize=(10, 5))
 
-# グラフのプロット（英語ラベル）
+# グラフのプロット
 ax.plot(x, y, label="Deflection Curve", color="blue", linewidth=3)
 ax.fill_between(x, y, 0, color="skyblue", alpha=0.3)
 
-# タイトルと軸ラベル（文字化け回避のため英語表記）
+# タイトルと軸ラベル (文字化け対策で英語)
 ax.set_title(f"Span: {L}mm / Section: {b}x{h}mm / E: {E} N/mm2", fontsize=14)
 ax.set_xlabel("Position (mm)", fontsize=12)
 ax.set_ylabel("Deflection (mm)", fontsize=12)
 
-# ★Y軸の表示範囲を調整（たわみが小さくてもペチャンコに見えないようにする）
-current_limit = -delta_max * 1.5 
+# Y軸の範囲設定 (たわみが小さくても見やすく調整)
+current_limit = -delta_max * 1.5
 view_limit = min(-25, current_limit) # 最低でも-25mmまでは表示
 ax.set_ylim(view_limit, 5)
 
