@@ -20,15 +20,21 @@ mode = st.sidebar.radio(
 st.sidebar.markdown("---")
 st.sidebar.header("共通パラメータ")
 
+# 【修正】樹種の選択肢（任意入力を追加）
 wood_materials = {
     "杉 (E=7000 N/mm²)": 7000,
     "桧 (E=9000 N/mm²)": 9000,
     "米松 (E=11000 N/mm²)": 11000,
     "集成材 (E=12000 N/mm²)": 12000,
-    "鋼材 (E=205000 N/mm²)": 205000
+    "鋼材 (E=205000 N/mm²)": 205000,
+    "任意入力 (Manual Input)": "manual"
 }
-selected_material = st.sidebar.selectbox("樹種を選択", list(wood_materials.keys()))
-E = wood_materials[selected_material]
+selected_label = st.sidebar.selectbox("樹種を選択", list(wood_materials.keys()))
+
+if wood_materials[selected_label] == "manual":
+    E = st.sidebar.number_input("ヤング係数 E (N/mm²)", value=7000, step=100)
+else:
+    E = wood_materials[selected_label]
 
 # スパン L (910から455刻みで6000まで)
 span_options = list(range(910, 6001, 455))
@@ -95,16 +101,16 @@ if delta_max > 60:
 else:
     ax.text(L/2, delta_max + 3, f"{delta_max:.2f}mm", color="red", ha="center", fontweight="bold")
 
-# 【文字化け対策】全て英語のラベルに固定
+# 文字化け対策ラベル
 ax.set_title(f"Span:{L}mm / {load_desc} / E:{E}", fontsize=10)
 ax.set_xlabel("Position (mm)")
 ax.set_ylabel("Deflection (mm)")
 
-# 【修正】横軸目盛りを455刻みに固定
+# 横軸目盛りを455刻みに固定
 ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
 
 ax.grid(True, linestyle="--", alpha=0.5)
 ax.invert_yaxis()
-ax.set_ylim(60, -2) # 縦軸 0-60固定
+ax.set_ylim(60, -2)
 
 st.pyplot(fig)
