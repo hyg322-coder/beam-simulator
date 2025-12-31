@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+import japanize_matplotlib
 
 # ページ設定
 st.set_page_config(page_title="梁たわみシミュレーター", layout="wide")
