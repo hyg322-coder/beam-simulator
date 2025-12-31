@@ -30,7 +30,8 @@ if selected_label == "任意入力":
     fb = st.sidebar.number_input("fb (N/mm²)", value=10.0)
     fs = st.sidebar.number_input("fs (N/mm²)", value=0.8)
 else:
-    E, fb, fs = material_db[selected_label]["E"], material_db[selected_label]["fb"], material_db[selected_label]["fs"]
+    item = material_db[selected_label]
+    E, fb, fs = item["E"], item["fb"], item["fs"]
 
 L = st.sidebar.select_slider("L (mm)", options=list(range(910, 6001, 455)), value=3640)
 b = st.sidebar.select_slider("b (mm)", options=[105, 120, 150, 180, 210, 240, 270], value=120)
@@ -75,49 +76,25 @@ with c3:
     if delta_max <= L/300: st.success(f"OK (1/{ratio})")
     else: st.error("NG")
 
-# --- 5. グラフ描画 ---
+# --- 5. グラフ描画 (縦方向にボリュームアップ) ---
 st.markdown("### 📊 応力・変形図")
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 4.2))
-plt.subplots_adjust(hspace=1.5)
+# 携帯で見映えがするように全体の高さを 4.0 -> 5.5 にアップ
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 5.5))
+plt.subplots_adjust(hspace=0.8) # 図ごとの間隔を少し詰めて図自体を大きく
 
 def decorate(ax, label_text, unit):
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
-    ax.tick_params(axis='both', labelsize=7)
+    ax.tick_params(axis='both', labelsize=8)
     ax.grid(True, linestyle="--", alpha=0.3)
-    ax.plot([0, L], [0, 0], 'k-', linewidth=0.8)
-    ax.plot(0, 0, '^k', markersize=5)
-    ax.plot(L, 0, '^k', markersize=5)
-    ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=8, fontweight='bold', pad=2)
+    ax.plot([0, L], [0, 0], 'k-', linewidth=1.0)
+    ax.plot(0, 0, '^k', markersize=6)
+    ax.plot(L, 0, '^k', markersize=6)
+    ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=9, fontweight='bold')
     ax.set_xlim(-100, L + 100)
 
-# M図: 反転した軸に合わせて数値を「曲線の上（基線寄り）」に配置
+# M図: Y軸を伸ばしてダイナミックに
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
-ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=1.5)
+ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=2.0)
 decorate(ax_m, "M", "kN-m")
 ax_m.invert_yaxis()
-# 【最重要修正】座標をM_maxよりわずかに大きくし、va="bottom"にすることで線の上に配置
-ax_m.text(L/2, M_max/1e6 + 0.5, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
-          color="forestgreen", ha="center", va="bottom", fontsize=7, fontweight='bold')
-
-# S図: 左プラス(上)・右マイナスの右下がり
-ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
-ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=1.5)
-lim_s = max(abs(Q_max/1000) * 1.6, 5)
-ax_s.set_ylim(-lim_s, lim_s) 
-decorate(ax_s, "S", "kN")
-ax_s.text(0, Q_max/1000, f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=7, fontweight='bold')
-ax_s.text(L, -Q_max/1000, f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=7, fontweight='bold')
-
-# d図
-y_d = np.array([get_delta(x) for x in x_vals])
-ax_d.fill_between(x_vals, y_d, 0, color="skyblue", alpha=0.15)
-ax_d.plot(x_vals, y_d, color="blue", linewidth=1.5)
-decorate(ax_d, "d", "mm")
-ax_d.invert_yaxis()
-ax_d.set_ylim(60, -10)
-ax_d.text(L/2, delta_max, f"d={delta_max:.1f}", color="blue", ha="center", va="top", fontsize=7, fontweight='bold')
-
-ax_d.set_xlabel("Position (mm)", fontsize=8)
-
-# グラフを確実に表示
-st.pyplot(fig)
+# Y軸
