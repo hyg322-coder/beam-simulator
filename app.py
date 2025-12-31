@@ -5,7 +5,7 @@ import numpy as np
 # ページ設定
 st.set_page_config(page_title="木製梁のたわみ計算シミュレーター", layout="wide")
 
-# タイトル（ここは日本語でOK）
+# タイトル（日本語）
 st.title("🏗️ 木製梁のたわみ計算シミュレーター")
 st.markdown("計算モードを選択して、パラメータを調整してください。")
 
@@ -56,7 +56,8 @@ if mode == "等分布荷重 (全体)":
 else: # 集中荷重 (中央)
     st.sidebar.markdown("---")
     st.sidebar.header("荷重設定 (集中)")
-    P = st.sidebar.number_input("集中荷重 P (N)", value=3000.0, step=100.0)
+    # 【変更点】デフォルト値を等分布荷重5N相当（5*3640=18200）に設定
+    P = st.sidebar.number_input("集中荷重 P (N)", value=18200.0, step=100.0)
     
     # 公式: PL^3 / 48EI
     delta_max = (P * L**3) / (48 * E * I)
@@ -107,7 +108,7 @@ ax.plot(L/2, delta_max, "ro", markersize=8)
 ax.text(L/2, delta_max + (delta_max*0.1), f"{delta_max:.2f}mm", 
         color="red", ha="center", fontweight="bold")
 
-# 装飾（ここだけ英語にしてエラー回避）
+# 装飾（グラフ内は英語のまま＝エラー回避）
 ax.set_title(f"Span: {L}mm / {load_desc} / E: {E}", fontsize=12)
 ax.set_xlabel("Position (mm)")
 ax.set_ylabel("Deflection (mm)")
