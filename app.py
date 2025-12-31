@@ -60,19 +60,18 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 断面算定結果 (OK巨大表示) ---
+# --- 4. 断面算定結果 (巨大OKカード) ---
 def result_card(label, value, limit, is_ok):
     color = "#28a745" if is_ok else "#dc3545"
     bg_color = "#d4edda" if is_ok else "#f8d7da"
     text_color = "#155724" if is_ok else "#721c24"
     status = "OK" if is_ok else "NG"
-    
     st.markdown(f"""
-        <div style="background-color: {bg_color}; border-radius: 10px; padding: 20px; text-align: center; border: 2px solid {color};">
+        <div style="background-color: {bg_color}; border-radius: 10px; padding: 20px; text-align: center; border: 2px solid {color}; margin-bottom: 10px;">
             <p style="margin: 0; font-size: 16px; color: {text_color}; font-weight: bold;">{label}</p>
-            <h2 style="margin: 10px 0; color: {text_color};">{value}</h2>
-            <h1 style="margin: 0; font-size: 48px; color: {color}; font-weight: 900;">{status}</h1>
-            <p style="margin: 5px 0 0 0; font-size: 14px; color: {text_color};">{limit}</p>
+            <h2 style="margin: 10px 0; color: {text_color}; font-size: 28px;">{value}</h2>
+            <h1 style="margin: 0; font-size: 56px; color: {color}; font-weight: 900; line-height: 1.2;">{status}</h1>
+            <p style="margin: 5px 0 0 0; font-size: 14px; color: {text_color}; opacity: 0.8;">{limit}</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -85,7 +84,7 @@ with c2:
 with c3:
     result_card("撓み検定", f"{delta_max:.2f} mm", f"(1/{ratio})", delta_max <= L/300)
 
-# --- 5. グラフ描画 (モバイル究極対応) ---
+# --- 5. グラフ描画 ---
 st.markdown("### 📊 応力・変形図")
 
 fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 9.5))
@@ -93,4 +92,45 @@ plt.subplots_adjust(hspace=0.6)
 
 # M図: 20固定
 ax_m.xaxis.set_major_locator(ticker.MultipleLocator(455))
-ax_m.grid
+ax_m.grid(True, linestyle="--", alpha=0.3)
+ax_m.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+ax_m.plot(0, 0, '^k', markersize=10)
+ax_m.plot(L, 0, '^k', markersize=10)
+ax_m.set_title("M (kN-m)", loc='left', fontsize=12, fontweight='bold')
+ax_m.set_xlim(-150, L + 150)
+ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
+ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
+ax_m.set_ylim(20, -5) 
+ax_m.text(L/2, (M_max/1e6) + 0.3, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
+
+# S図: 20固定・右下がり
+ax_s.xaxis.set_major_locator(ticker.MultipleLocator(455))
+ax_s.grid(True, linestyle="--", alpha=0.3)
+ax_s.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+ax_s.plot(0, 0, '^k', markersize=10)
+ax_s.plot(L, 0, '^k', markersize=10)
+ax_s.set_title("S (kN)", loc='left', fontsize=12, fontweight='bold')
+ax_s.set_xlim(-150, L + 150)
+ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
+ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
+ax_s.set_ylim(-20, 20) 
+ax_s.text(0, (Q_max/1000), f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
+ax_s.text(L, (-Q_max/1000), f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
+
+# d図: 30固定
+ax_d.xaxis.set_major_locator(ticker.MultipleLocator(455))
+ax_d.grid(True, linestyle="--", alpha=0.3)
+ax_d.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+ax_d.plot(0, 0, '^k', markersize=10)
+ax_d.plot(L, 0, '^k', markersize=10)
+ax_d.set_title("d (mm)", loc='left', fontsize=12, fontweight='bold')
+ax_d.set_xlim(-150, L + 150)
+y_d_plot = np.array([get_delta(x) for x in x_vals])
+ax_d.fill_between(x_vals, y_d_plot, 0, color="skyblue", alpha=0.15)
+ax_d.plot(x_vals, y_d_plot, color="blue", linewidth=3.0)
+ax_d.set_ylim(30, -5) 
+ax_d.text(L/2, (delta_max + 1.0), f"d={delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
+ax_d.set_xlabel("Position (mm)", fontsize=11)
+
+# 【最終命令】グラフを確実に表示させる
+st.pyplot(fig)
