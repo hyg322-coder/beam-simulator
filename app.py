@@ -60,72 +60,27 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 断面算定結果 ---
-st.subheader("📋 断面算定結果")
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.markdown("**曲げ応力度検定**")
-    st.metric("", f"{sigma_b:.2f} N/mm²")
-    if sigma_b <= fb: st.success(f"OK (≦{fb:.1f})")
-    else: st.error("NG")
-with c2:
-    st.markdown("**せん断応力度検定**")
-    st.metric("", f"{tau:.2f} N/mm²")
-    if tau <= fs: st.success(f"OK (≦{fs:.1f})")
-    else: st.error("NG")
-with c3:
-    st.markdown("**撓み検定**")
-    st.metric("", f"{delta_max:.2f} mm")
-    if delta_max <= L/300: st.success(f"OK (1/{ratio})")
-    else: st.error("NG")
+# --- 4. 断面算定結果 (表示の拡大) ---
+def result_card(label, value, limit, status_text):
+    if "OK" in status_text:
+        # OKの場合は大きく目立つグリーン
+        st.markdown(f"""
+            <div style="background-color: #d4edda; border-radius: 10px; padding: 20px; text-align: center; border: 2px solid #28a745;">
+                <p style="margin: 0; font-size: 16px; color: #155724; font-weight: bold;">{label}</p>
+                <h2 style="margin: 10px 0; color: #155724;">{value}</h2>
+                <h1 style="margin: 0; font-size: 48px; color: #28a745; font-weight: 900;">OK</h1>
+                <p style="margin: 5px 0 0 0; font-size: 14px; color: #155724;">{limit}</p>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        # NGの場合は大きく目立つレッド
+        st.markdown(f"""
+            <div style="background-color: #f8d7da; border-radius: 10px; padding: 20px; text-align: center; border: 2px solid #dc3545;">
+                <p style="margin: 0; font-size: 16px; color: #721c24; font-weight: bold;">{label}</p>
+                <h2 style="margin: 10px 0; color: #721c24;">{value}</h2>
+                <h1 style="margin: 0; font-size: 48px; color: #dc3545; font-weight: 900;">NG</h1>
+                <p style="margin: 5px 0 0 0; font-size: 14px; color: #721c24;">再検討が必要</p>
+            </div>
+        """, unsafe_allow_html=True)
 
-# --- 5. グラフ描画 (モバイル究極・大迫力仕様) ---
-st.markdown("### 📊 応力・変形図")
-
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 9.5))
-plt.subplots_adjust(hspace=0.6)
-
-# M図: 20固定
-ax_m.xaxis.set_major_locator(ticker.MultipleLocator(455))
-ax_m.grid(True, linestyle="--", alpha=0.3)
-ax_m.plot([0, L], [0, 0], 'k-', linewidth=1.5)
-ax_m.plot(0, 0, '^k', markersize=10)
-ax_m.plot(L, 0, '^k', markersize=10)
-ax_m.set_title("M (kN-m)", loc='left', fontsize=12, fontweight='bold')
-ax_m.set_xlim(-150, L + 150)
-ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
-ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
-ax_m.set_ylim(20, -5) # 下向きを正とする
-ax_m.text(L/2, (M_max/1e6) + 0.3, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
-
-# S図: 20固定・右下がり(左端が上)
-ax_s.xaxis.set_major_locator(ticker.MultipleLocator(455))
-ax_s.grid(True, linestyle="--", alpha=0.3)
-ax_s.plot([0, L], [0, 0], 'k-', linewidth=1.5)
-ax_s.plot(0, 0, '^k', markersize=10)
-ax_s.plot(L, 0, '^k', markersize=10)
-ax_s.set_title("S (kN)", loc='left', fontsize=12, fontweight='bold')
-ax_s.set_xlim(-150, L + 150)
-ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
-ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
-ax_s.set_ylim(-20, 20) # 上が+20、下が-20
-ax_s.text(0, (Q_max/1000), f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
-ax_s.text(L, (-Q_max/1000), f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
-
-# d図: 30固定、大迫力のしなり
-ax_d.xaxis.set_major_locator(ticker.MultipleLocator(455))
-ax_d.grid(True, linestyle="--", alpha=0.3)
-ax_d.plot([0, L], [0, 0], 'k-', linewidth=1.5)
-ax_d.plot(0, 0, '^k', markersize=10)
-ax_d.plot(L, 0, '^k', markersize=10)
-ax_d.set_title("d (mm)", loc='left', fontsize=12, fontweight='bold')
-ax_d.set_xlim(-150, L + 150)
-y_d = np.array([get_delta(x) for x in x_vals])
-ax_d.fill_between(x_vals, y_d, 0, color="skyblue", alpha=0.15)
-ax_d.plot(x_vals, y_d, color="blue", linewidth=3.0)
-ax_d.set_ylim(30, -5) # 下向きを正とする
-ax_d.text(L/2, (delta_max + 1.0), f"d={delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
-ax_d.set_xlabel("Position (mm)", fontsize=11)
-
-# 【最終実行】グラフを表示
-st.pyplot(fig)
+st.subheader("📋
