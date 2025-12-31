@@ -59,53 +59,51 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 結果表示 ---
+# --- 4. 断面算定結果 (整理された項目名) ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
-
 with c1:
-    st.write("### 曲げ応力度検定")
+    st.markdown("**曲げ応力度検定**")
     st.metric("", f"{sigma_b:.2f} N/mm²")
-    if sigma_b <= fb:
-        st.success(f"### OK (≦{fb:.1f})")
-    else:
-        st.error("### NG")
-
+    if sigma_b <= fb: st.success(f"OK (≦{fb:.1f})")
+    else: st.error("NG")
 with c2:
-    st.write("### せん断応力度検定")
+    st.markdown("**せん断応力度検定**")
     st.metric("", f"{tau:.2f} N/mm²")
-    if tau <= fs:
-        st.success(f"### OK (≦{fs:.1f})")
-    else:
-        st.error("### NG")
-
+    if tau <= fs: st.success(f"OK (≦{fs:.1f})")
+    else: st.error("NG")
 with c3:
-    st.write("### 撓み検定")
+    st.markdown("**撓み検定**")
     st.metric("", f"{delta_max:.2f} mm")
-    if delta_max <= L/300:
-        st.success(f"### OK (1/{ratio})")
-    else:
-        st.error("### NG")
+    if delta_max <= L/300: st.success(f"OK (1/{ratio})")
+    else: st.error("NG")
 
-# --- 5. 共通描画関数 ---
-def create_beam_plot(y_vals, color, y_label, y_lim_top, y_lim_bottom, text_y, text_content):
-    fig, ax = plt.subplots(figsize=(10, 4.5))
+# --- 5. グラフ描画 (モバイル究極対応) ---
+st.markdown("### 📊 応力・変形図")
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 8.5))
+plt.subplots_adjust(hspace=0.6)
+
+def decorate(ax, label_text, unit):
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
     ax.tick_params(axis='both', labelsize=10)
     ax.grid(True, linestyle="--", alpha=0.3)
     ax.plot([0, L], [0, 0], 'k-', linewidth=1.5)
     ax.plot(0, 0, '^k', markersize=10)
     ax.plot(L, 0, '^k', markersize=10)
+    ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=12, fontweight='bold')
     ax.set_xlim(-150, L + 150)
-    
-    ax.fill_between(x_vals, y_vals, 0, color=color, alpha=0.15)
-    ax.plot(x_vals, y_vals, color=color, linewidth=3.0)
-    ax.set_ylabel(y_label, fontsize=10, fontweight='bold')
-    ax.set_ylim(y_lim_top, y_lim_bottom)
-    
-    if text_content != "":
-        ax.text(L/2, text_y, text_content, 
-                color=color, ha="center", va="bottom", fontsize=10, fontweight='bold')
-    return fig
 
-# ---
+# M図: 20固定、文字位置調整
+ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
+ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
+decorate(ax_m, "M", "kN-m")
+ax_m.set_ylim(20, -5) 
+ax_m.text(L/2, M_max/1e6 + 0.5, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
+          color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
+
+# S図: 20固定、右下がり
+ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
+ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
+decorate(ax_s, "S", "kN")
+ax_s.set_ylim(-20, 20) 
+ax_s.text(0, Q_max/1000, f"
