@@ -64,7 +64,7 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 断面算定結果 (モバイル横長スリム表示) ---
+# --- 4. 断面算定結果 (名称を正確に定義) ---
 st.subheader("📋 断面算定結果")
 
 def compact_result_card(label, val_text, limit_val, is_ok):
@@ -84,11 +84,12 @@ def compact_result_card(label, val_text, limit_val, is_ok):
         </div>
     """, unsafe_allow_html=True)
 
-compact_result_card("曲げ(M): σb", f"{sigma_b:.2f} N/mm²", f"{fb:.1f}", sigma_b <= fb)
-compact_result_card("せん断(S): τ", f"{tau:.2f} N/mm²", f"{fs:.1f}", tau <= fs)
-compact_result_card("たわみ(d): δ", f"{delta_max:.2f} mm", f"{L/300:.1f} (1/300)", delta_max <= L/300)
+# 指示に基づき名称を修正
+compact_result_card("曲げ応力度検定(M): σb", f"{sigma_b:.2f} N/mm²", f"{fb:.1f}", sigma_b <= fb)
+compact_result_card("剪断応力度検定(S): τ", f"{tau:.2f} N/mm²", f"{fs:.1f}", tau <= fs)
+compact_result_card("撓み検定(d): δ", f"{delta_max:.2f} mm", f"{L/300:.1f} (1/300)", delta_max <= L/300)
 
-# --- 5. グラフ描画 (大迫力数値) ---
+# --- 5. グラフ描画 (名称と数値を明確化) ---
 st.markdown("### 📊 応力・変形図")
 
 def decorate(ax, unit, y_max, y_min):
@@ -108,26 +109,29 @@ fig_m, ax_m = plt.subplots(figsize=(10, 3.2))
 decorate(ax_m, "kN-m", 20, -5)
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.5)
+# 最大モーメント値を強調
 ax_m.text(L/2, (M_max/1e6) + 1.2, f"{M_max/1e6:.2f}", color="forestgreen", ha="center", va="bottom", fontsize=24, fontweight='black')
 st.pyplot(fig_m)
 
 # S図
-st.markdown("#### ■ せん断力図 (S)")
+st.markdown("#### ■ 剪断力図 (S)")
 fig_s, ax_s = plt.subplots(figsize=(10, 3.2))
 decorate(ax_s, "kN", -20, 20)
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.5)
+# 最大剪断力を左右に表示
 ax_s.text(20, (Q_max/1000) + 1.2, f"{Q_max/1000:.1f}", color="darkorange", ha="left", va="bottom", fontsize=22, fontweight='black')
 ax_s.text(L-20, (-Q_max/1000) - 1.2, f"{-Q_max/1000:.1f}", color="darkorange", ha="right", va="top", fontsize=22, fontweight='black')
 st.pyplot(fig_s)
 
 # d図
-st.markdown("#### ■ たわみ図 (d)")
+st.markdown("#### ■ 撓み図 (d)")
 fig_d, ax_d = plt.subplots(figsize=(10, 3.2))
 decorate(ax_d, "mm", 30, -5)
 y_d_plot = [get_delta(x) for x in x_vals]
 ax_d.fill_between(x_vals, y_d_plot, 0, color="skyblue", alpha=0.15)
 ax_d.plot(x_vals, y_d_plot, color="blue", linewidth=3.5)
+# 最大撓み値を巨大化
 ax_d.text(L/2, (delta_max + 1.5), f"{delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=24, fontweight='black')
 ax_d.set_xlabel("Position (mm)", fontsize=11)
 st.pyplot(fig_d)
