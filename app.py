@@ -56,60 +56,58 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 結果表示 ---
+# --- 4. 結果表示（記号 M, S, d を追加） ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
 with c1:
-    st.metric("曲げ σb", f"{sigma_b:.2f} N/mm²")
+    st.metric("曲げ (M) : σb", f"{sigma_b:.2f} N/mm²")
     _ = st.success(f"OK (≦{fb:.1f})") if sigma_b <= fb else st.error("NG")
 with c2:
-    st.metric("せん断 τ", f"{tau:.2f} N/mm²")
+    st.metric("せん断 (S) : τ", f"{tau:.2f} N/mm²")
     _ = st.success(f"OK (≦{fs:.1f})") if tau <= fs else st.error("NG")
 with c3:
-    st.metric("最大たわみ δ", f"{delta_max:.2f} mm")
+    st.metric("たわみ (d) : δ", f"{delta_max:.2f} mm")
     _ = st.success(f"OK (1/{ratio})") if delta_max <= L/300 else st.error("NG")
 
-# --- 5. グラフ描画 (密度アップ) ---
+# --- 5. グラフ描画 ---
 st.markdown("### 📊 応力・変形図")
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 4.0), sharex=True)
-plt.subplots_adjust(hspace=1.4)
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 3.8), sharex=True)
+plt.subplots_adjust(hspace=1.5)
 
-def decorate(ax, title, unit):
+def decorate(ax, label_text, unit):
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
     ax.tick_params(axis='both', labelsize=7)
     ax.grid(True, linestyle="--", alpha=0.3)
     ax.plot([0, L], [0, 0], 'k-', linewidth=0.8)
     ax.plot(0, 0, '^k', markersize=5)
     ax.plot(L, 0, '^k', markersize=5)
-    ax.set_title(f"{title} ({unit})", loc='left', fontsize=8, fontweight='bold', pad=2)
+    ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=8, fontweight='bold', pad=2)
 
-# M図: 曲げモーメント (kN-m)
+# M図
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=1.5)
 decorate(ax_m, "M", "kN-m")
 ax_m.invert_yaxis()
-ax_m.text(L/2, M_max/1e6, f"M={M_max/1e6:.2f}", color="forestgreen", ha="center", va="top", fontsize=8, fontweight='bold')
+ax_m.text(L/2, M_max/1e6, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="top", fontsize=7, fontweight='bold')
 
-# S図: せん断力 (kN)
+# S図
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=1.5)
-lim_s = max(abs(Q_max/1000) * 1.5, 5)
-ax_s.set_ylim(-lim_s, lim_s)
+lim_s = max(abs(Q_max/1000) * 1.6, 5)
+ax_s.set_ylim(lim_s, -lim_s) # 上がプラス
 decorate(ax_s, "S", "kN")
-# せん断力Qを表示し、その下に小さく応力度tauを添える（プロの配慮）
-ax_s.text(0, Q_max/1000, f"Q={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=7, fontweight='bold')
-ax_s.text(L, -Q_max/1000, f"Q={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=7, fontweight='bold')
+ax_s.text(0, Q_max/1000, f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=7, fontweight='bold')
+ax_s.text(L, -Q_max/1000, f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=7, fontweight='bold')
 
-# d図: たわみ (mm)
+# d図
 y_d = np.array([get_delta(x) for x in x_vals])
 ax_d.fill_between(x_vals, y_d, 0, color="skyblue", alpha=0.15)
 ax_d.plot(x_vals, y_d, color="blue", linewidth=1.5)
 decorate(ax_d, "d", "mm")
 ax_d.invert_yaxis()
 ax_d.set_ylim(60, -25)
-# 寸法線 L
 ax_d.annotate('', xy=(0, -12), xytext=(L, -12), arrowprops=dict(arrowstyle='<->', color='gray', lw=0.6))
 ax_d.text(L/2, -15, f"L={L}mm", ha='center', color='gray', fontsize=8, fontweight='bold')
-ax_d.text(L/2, delta_max, f"δ={delta_max:.1f}", color="blue", ha="center", va="top", fontsize=8, fontweight='bold')
+ax_d.text(L/2, delta_max, f"d={delta_max:.1f}", color="blue", ha="center", va="top", fontsize=8, fontweight='bold')
 
 st.pyplot(fig)
