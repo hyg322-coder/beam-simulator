@@ -52,36 +52,4 @@ else:
     M_max, Q_max = (P * L) / 4, P / 2
     m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/2)
     s_diag = np.where(x_vals < L/2, P/2, -P/2)
-    delta_max = (P * L**3) / (48 * E * I)
-    def get_delta(x): 
-        return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*L**2 - 4*(L-x)**2)) / (48 * E * I)
-
-sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
-ratio = int(L / delta_max) if delta_max > 0 else 0
-
-# --- 4. 結果表示 ---
-st.subheader("📋 断面算定結果")
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.metric("曲げ (M) : σb", f"{sigma_b:.2f} N/mm²")
-    if sigma_b <= fb: st.success(f"OK (≦{fb:.1f})")
-    else: st.error("NG")
-with c2:
-    st.metric("せん断 (S) : τ", f"{tau:.2f} N/mm²")
-    if tau <= fs: st.success(f"OK (≦{fs:.1f})")
-    else: st.error("NG")
-with c3:
-    st.metric("たわみ (d) : δ", f"{delta_max:.2f} mm")
-    if delta_max <= L/300: st.success(f"OK (1/{ratio})")
-    else: st.error("NG")
-
-# --- 5. グラフ描画 (モバイル究極対応：縦に3倍のボリューム) ---
-st.markdown("### 📊 応力・変形図")
-# 全体の高さを 9.0 に引き上げ（スクロールして見せる縦長構成）
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 9.0))
-plt.subplots_adjust(hspace=0.6) # 間隔を詰め、各図の描画エリアを最大化
-
-def decorate(ax, label_text, unit):
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
-    ax.tick_params(axis='both', labelsize=9)
-    ax.grid(True, linestyle="--
+    delta_max = (P * L**3) / (48
