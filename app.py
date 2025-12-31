@@ -56,33 +56,31 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 断面算定結果 (横並びコンパクト表示) ---
+# --- 4. 断面算定結果 (モバイル特化・横並びスリム表示) ---
 st.subheader("📋 断面算定結果")
 
-def compact_result_card(label, val_text, limit_text, is_ok):
+def compact_result_card(label, val_text, limit_val, is_ok):
     color = "#28a745" if is_ok else "#dc3545"
     bg_color = "#e9f7ef" if is_ok else "#fdecea"
     status = "OK" if is_ok else "NG"
-    # フレックスボックスで数値を横に並べ、OKを右側に配置
     st.markdown(f"""
-        <div style="background-color: {bg_color}; border-radius: 8px; padding: 10px; border: 1px solid {color}; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="text-align: left;">
-                <div style="font-size: 13px; color: #555; font-weight: bold;">{label}</div>
-                <div style="display: flex; align-items: baseline; gap: 10px;">
-                    <span style="font-size: 20px; font-weight: bold; color: #000;">{val_text}</span>
-                    <span style="font-size: 15px; color: #666; font-weight: bold;">{limit_text}</span>
+        <div style="background-color: {bg_color}; border-radius: 6px; padding: 8px 12px; border: 1px solid {color}; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex-grow: 1;">
+                <div style="font-size: 12px; color: #555; font-weight: bold; margin-bottom: 2px;">{label}</div>
+                <div style="display: flex; align-items: baseline; gap: 8px;">
+                    <span style="font-size: 18px; font-weight: 800; color: #000;">{val_text}</span>
+                    <span style="font-size: 14px; color: #666; font-weight: bold;">≦ {limit_val}</span>
                 </div>
             </div>
-            <div style="font-size: 42px; font-weight: 900; color: {color}; line-height: 1;">{status}</div>
+            <div style="font-size: 32px; font-weight: 900; color: {color}; line-height: 1; padding-left: 10px;">{status}</div>
         </div>
     """, unsafe_allow_html=True)
 
-# 携帯で見やすいよう、縦に3つ並べる（ただし中身を横に広げる）
-compact_result_card("曲げ(M): σb", f"{sigma_b:.2f} N/mm²", f"≦ {fb:.1f}", sigma_b <= fb)
-compact_result_card("せん断(S): τ", f"{tau:.2f} N/mm²", f"≦ {fs:.1f}", tau <= fs)
-compact_result_card("たわみ(d): δ", f"{delta_max:.2f} mm", f"≦ {L/300:.1f} (1/300)", delta_max <= L/300)
+compact_result_card("曲げ(M): σb", f"{sigma_b:.2f} N/mm²", f"{fb:.1f}", sigma_b <= fb)
+compact_result_card("せん断(S): τ", f"{tau:.2f} N/mm²", f"{fs:.1f}", tau <= fs)
+compact_result_card("たわみ(d): δ", f"{delta_max:.2f} mm", f"{L/300:.1f} (1/300)", delta_max <= L/300)
 
-# --- 5. グラフ描画 ---
+# --- 5. グラフ描画 (モバイル大迫力数値) ---
 st.markdown("### 📊 応力・変形図")
 
 def decorate(ax, unit, y_max, y_min):
@@ -94,33 +92,37 @@ def decorate(ax, unit, y_max, y_min):
     ax.set_xlim(-150, L + 150)
     ax.set_ylabel(unit, fontsize=10)
     ax.set_ylim(y_max, y_min)
+    ax.tick_params(axis='both', labelsize=9)
 
 # M図
 st.markdown("#### ■ 曲げモーメント図 (M)")
-fig_m, ax_m = plt.subplots(figsize=(10, 2.8))
+fig_m, ax_m = plt.subplots(figsize=(10, 3.2))
 decorate(ax_m, "kN-m", 20, -5)
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
-ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
-ax_m.text(L/2, (M_max/1e6) + 1.2, f"Mmax = {M_max/1e6:.2f}", color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
+ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.5)
+# 最大数値を巨大化
+ax_m.text(L/2, (M_max/1e6) + 1.5, f"{M_max/1e6:.2f}", color="forestgreen", ha="center", va="bottom", fontsize=20, fontweight='black')
 st.pyplot(fig_m)
 
 # S図
 st.markdown("#### ■ せん断力図 (S)")
-fig_s, ax_s = plt.subplots(figsize=(10, 2.8))
+fig_s, ax_s = plt.subplots(figsize=(10, 3.2))
 decorate(ax_s, "kN", -20, 20)
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
-ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
-ax_s.text(0, (Q_max/1000) + 1, f"S = {Q_max/1000:.1f}", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
-ax_s.text(L, (-Q_max/1000) - 1, f"S = {-Q_max/1000:.1f}", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
+ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.5)
+# 数値を大きくし、位置を調整
+ax_s.text(20, (Q_max/1000) + 1, f"{Q_max/1000:.1f}", color="darkorange", ha="left", va="bottom", fontsize=18, fontweight='black')
+ax_s.text(L-20, (-Q_max/1000) - 1, f"{-Q_max/1000:.1f}", color="darkorange", ha="right", va="top", fontsize=18, fontweight='black')
 st.pyplot(fig_s)
 
 # d図
 st.markdown("#### ■ たわみ図 (d)")
-fig_d, ax_d = plt.subplots(figsize=(10, 2.8))
+fig_d, ax_d = plt.subplots(figsize=(10, 3.2))
 decorate(ax_d, "mm", 30, -5)
 y_d_plot = np.array([get_delta(x) for x in x_vals])
 ax_d.fill_between(x_vals, y_d_plot, 0, color="skyblue", alpha=0.15)
-ax_d.plot(x_vals, y_d_plot, color="blue", linewidth=3.0)
-ax_d.text(L/2, (delta_max + 1.8), f"δmax = {delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
+ax_d.plot(x_vals, y_d_plot, color="blue", linewidth=3.5)
+# 最大たわみ値を巨大化
+ax_d.text(L/2, (delta_max + 2.0), f"{delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=20, fontweight='black')
 ax_d.set_xlabel("Position (mm)", fontsize=11)
 st.pyplot(fig_d)
