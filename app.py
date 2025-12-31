@@ -47,20 +47,21 @@ if mode == "等分布荷重 (全体)":
     m_diag = (w * x_vals / 2) * (L - x_vals)
     s_diag = (w * L / 2) - (w * x_vals)
     delta_max = (5 * w * (L**4)) / (384 * E * I)
-    def get_delta(x): return (w * x * (L**3 - 2*L*(x**2) + (x**3))) / (24 * E * I)
+    def get_delta(x):
+        return (w * x * (L**3 - 2*L*(x**2) + (x**3))) / (24 * E * I)
 else:
     P = st.sidebar.number_input("P (N)", value=18200.0)
     M_max, Q_max = (P * L) / 4, P / 2
     m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/2)
     s_diag = np.where(x_vals < L/2, P/2, -P/2)
     delta_max = (P * (L**3)) / (48 * E * I)
-    def get_delta(x): 
+    def get_delta(x):
         return (P * x * (3*(L**2) - 4*(x**2))) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*(L**2) - 4*((L-x)**2))) / (48 * E * I)
 
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 断面算定結果 (モバイル特化・横長スリム表示) ---
+# --- 4. 断面算定結果 (モバイル究極スリム表示) ---
 st.subheader("📋 断面算定結果")
 
 def compact_result_card(label, val_text, limit_val, is_ok):
@@ -82,4 +83,4 @@ def compact_result_card(label, val_text, limit_val, is_ok):
 
 compact_result_card("曲げ(M): σb", f"{sigma_b:.2f} N/mm²", f"{fb:.1f}", sigma_b <= fb)
 compact_result_card("せん断(S): τ", f"{tau:.2f} N/mm²", f"{fs:.1f}", tau <= fs)
-compact_result_card("たわみ(d): δ", f"{delta_max:.2f
+compact_result_card("たわみ(d): δ", f"{delta_max:.2f} mm", f"{L/300:.
