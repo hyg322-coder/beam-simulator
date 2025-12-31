@@ -30,16 +30,16 @@ wood_materials = {
 selected_material = st.sidebar.selectbox("樹種を選択", list(wood_materials.keys()))
 E = wood_materials[selected_material]
 
-# 【修正】スパン L (910から455刻みで6000まで)
+# スパン L (910から455刻みで6000まで)
 span_options = list(range(910, 6001, 455))
 L = st.sidebar.select_slider("スパン L (mm)", options=span_options, value=3640)
 
-# 【修正】梁幅 b (指定のサイズリスト)
+# 梁幅 b (指定のサイズリスト)
 width_options = [105, 120, 150, 180, 210, 240, 270]
 b = st.sidebar.select_slider("梁幅 b (mm)", options=width_options, value=120)
 
-# 【修正】梁成 h (指定のサイズリスト)
-height_options = [105, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450]
+# 【修正】梁成 h (480, 510を追加)
+height_options = [105, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510]
 h = st.sidebar.select_slider("梁成 h (mm)", options=height_options, value=240)
 
 # 断面二次モーメント I
@@ -100,7 +100,8 @@ else:
 # --- 4. グラフ描画 ---
 st.markdown("### Deflection Graph")
 
-fig, ax = plt.subplots(figsize=(10, 4.0)) # 少し高さを確保
+# 【修正】グラフの高さを少し縮めて(4.0→3.2)画面に収まりやすく調整
+fig, ax = plt.subplots(figsize=(10, 3.2))
 x_vals = np.linspace(0, L, 100)
 
 y_vals = np.array([get_deflection(x) for x in x_vals])
@@ -110,17 +111,13 @@ ax.fill_between(x_vals, y_vals, 0, color="skyblue", alpha=0.3)
 ax.plot(x_vals, y_vals, color="blue", linewidth=3, label="Deflection")
 
 # 最大点のプロット
-# グラフ範囲外(60mm超)にいっても、点は正しい位置（画面外）に打つ
 ax.plot(L/2, delta_max, "ro", markersize=8)
 
-# テキスト表示：60mmを超えて画面外になる場合でも、読み取れる位置に工夫して表示するか、
-# あるいはグラフ外であることを示す矢印などをつけるのが親切ですが、
-# 今回は「撓み量は表示して」とのことなので、数値は必ず描画します。
-# ただし、y=60を超えると見えなくなるため、y=58あたりに固定表示させる処理を入れます。
+# テキスト表示制御
 if delta_max > 60:
-    display_y = 55 # グラフ上限ギリギリに表示
+    display_y = 55
     text_content = f"{delta_max:.2f}mm (Scale Out)"
-    text_color = "purple" # 範囲外を目立たせる色
+    text_color = "purple"
 else:
     display_y = delta_max + 2
     text_content = f"{delta_max:.2f}mm"
@@ -136,12 +133,10 @@ ax.set_ylabel("Deflection (mm)")
 ax.grid(True, linestyle="--", alpha=0.7)
 ax.legend(loc="upper right")
 
-# Y軸反転（下向きにたわむ）
+# Y軸反転
 ax.invert_yaxis()
 
-# 【修正】グラフ範囲の固定（0〜60mm）
-# 下向きなので invert_yaxis されています。
-# set_ylim(bottom, top) ですが、反転中は (大きい値, 小さい値) で指定します。
+# グラフ範囲固定（0〜60mm）
 ax.set_ylim(60, -2) 
 
 st.pyplot(fig)
