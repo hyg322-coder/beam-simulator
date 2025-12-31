@@ -58,23 +58,23 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 結果表示（デバッグ情報を抑制） ---
+# --- 4. 結果表示（変数代入でデバッグ情報を抑制） ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
 with c1:
     st.metric("曲げ σb", f"{sigma_b:.2f} N/mm²")
-    _ = st.success(f"OK (≦{fb:.1f})") if sigma_b <= fb else st.error("NG")
+    res1 = st.success(f"OK (≦{fb:.1f})") if sigma_b <= fb else st.error("NG")
 with c2:
     st.metric("せん断 τ", f"{tau:.2f} N/mm²")
-    _ = st.success(f"OK (≦{fs:.1f})") if tau <= fs else st.error("NG")
+    res2 = st.success(f"OK (≦{fs:.1f})") if tau <= fs else st.error("NG")
 with c3:
     st.metric("最大たわみ δ", f"{delta_max:.2f} mm")
-    _ = st.success(f"OK (1/{ratio})") if delta_max <= L/300 else st.error("NG")
+    res3 = st.success(f"OK (1/{ratio})") if delta_max <= L/300 else st.error("NG")
 
-# --- 5. グラフ描画 (スリム化：縦3.8) ---
+# --- 5. グラフ描画 (極限スリム化：縦3.5) ---
 st.markdown("### 📊 応力・変形図")
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 3.8), sharex=True)
-plt.subplots_adjust(hspace=1.2)
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 3.5), sharex=True)
+plt.subplots_adjust(hspace=1.4)
 
 def decorate(ax, title, unit):
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
@@ -85,26 +85,31 @@ def decorate(ax, title, unit):
     ax.plot(0, 0, '^k', markersize=4)
     ax.plot(L, 0, '^k', markersize=4)
 
-# M図 (曲げ)
+# M図
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=1.2)
-decorate(ax_m, "Bending Moment", "kN-m")
+decorate(ax_m, "M", "kN-m")
 ax_m.invert_yaxis()
-ax_m.text(L/2, M_max/1e6, f"Mmax={M_max/1e6:.2f}", color="forestgreen", ha="center", va="top", fontsize=7, fontweight='bold')
+ax_m.text(L/2, M_max/1e6, f"{M_max/1e6:.2f}", color="forestgreen", ha="center", va="top", fontsize=7, fontweight='bold')
 
-# S図 (せん断力：スケールを動的に固定)
+# S図 (スケール修正完了)
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=1.2)
-limit_s = max(Q_max/1000 * 1.2, 5) # スケールを反力の1.2倍に固定
-ax_s.set_ylim(limit_s, -limit_s)
-decorate(ax_s, "Shear Force", "kN")
-ax_s.text(0, Q_max/1000, f"Q={Q_max/1000:.1f}", color="darkorange", ha="left", va="bottom", fontsize=7, fontweight='bold')
-ax_s.text(L, -Q_max/1000, f"Q={-Q_max/1000:.1f}", color="darkorange", ha="right", va="top", fontsize=7, fontweight='bold')
+lim_s = max(abs(Q_max/1000) * 1.3, 5)
+ax_s.set_ylim(lim_s, -lim_s)
+decorate(ax_s, "S", "kN")
+ax_s.text(0, Q_max/1000, f"{Q_max/1000:.1f}", color="darkorange", ha="left", va="bottom", fontsize=7)
+ax_s.text(L, -Q_max/1000, f"{-Q_max/1000:.1f}", color="darkorange", ha="right", va="top", fontsize=7)
 
-# δ図 (たわみ + 寸法線)
+# δ図 (寸法線・カッコ閉じ修正完了)
 y_delta = np.array([get_delta(x) for x in x_vals])
 ax_d.fill_between(x_vals, y_delta, 0, color="skyblue", alpha=0.15)
 ax_d.plot(x_vals, y_delta, color="blue", linewidth=1.2)
-decorate(ax_d, "Deflection", "mm")
+decorate(ax_d, "d", "mm")
 ax_d.invert_yaxis()
-ax_d.set_ylim(6
+ax_d.set_ylim(60, -20) # カッコをしっかり閉じました
+ax_d.annotate('', xy=(0, -10), xytext=(L, -10), arrowprops=dict(arrowstyle='<->', color='gray', lw=0.5))
+ax_d.text(L/2, -12, f"L={L}mm", ha='center', va='bottom', color='gray', fontsize=7)
+ax_d.text(L/2, delta_max, f"{delta_max:.1f}", color="blue", ha="center", va="top", fontsize=7, fontweight='bold')
+
+st.pyplot(fig)
