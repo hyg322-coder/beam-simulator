@@ -78,24 +78,11 @@ with c3:
     if delta_max <= L/300: st.success(f"OK (1/{ratio})")
     else: st.error("NG")
 
-# --- 5. グラフ描画 ---
+# --- 5. グラフ描画 (モバイル究極・大迫力仕様) ---
 st.markdown("### 📊 応力・変形図")
 
-# グラフ設定の関数化を避け、直接描画することで表示エラーを根絶
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 8.5))
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 9.5))
 plt.subplots_adjust(hspace=0.6)
 
-# M図: 20固定、下に凸
-ax_m.xaxis.set_major_locator(ticker.MultipleLocator(455))
-ax_m.grid(True, linestyle="--", alpha=0.3)
-ax_m.plot([0, L], [0, 0], 'k-', linewidth=1.5)
-ax_m.plot(0, 0, '^k', markersize=10)
-ax_m.plot(L, 0, '^k', markersize=10)
-ax_m.set_title("M (kN-m)", loc='left', fontsize=12, fontweight='bold')
-ax_m.set_xlim(-150, L + 150)
-ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
-ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
-ax_m.set_ylim(20, -5) 
-ax_m.text(L/2, M_max/1e6 + 0.5, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
-
-# S図: 20固定・右下がり(左
+# M図: 20固定
+ax_m.xaxis.set_
