@@ -38,7 +38,7 @@ L = st.sidebar.select_slider("スパン L (mm)", options=span_options, value=364
 width_options = [105, 120, 150, 180, 210, 240, 270]
 b = st.sidebar.select_slider("梁幅 b (mm)", options=width_options, value=120)
 
-# 【修正】梁成 h (480, 510を追加)
+# 梁成 h (480, 510を含む指定リスト)
 height_options = [105, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510]
 h = st.sidebar.select_slider("梁成 h (mm)", options=height_options, value=240)
 
@@ -100,7 +100,7 @@ else:
 # --- 4. グラフ描画 ---
 st.markdown("### Deflection Graph")
 
-# 【修正】グラフの高さを少し縮めて(4.0→3.2)画面に収まりやすく調整
+# グラフの高さを少し縮めて画面に収まりやすく調整
 fig, ax = plt.subplots(figsize=(10, 3.2))
 x_vals = np.linspace(0, L, 100)
 
@@ -123,10 +123,12 @@ else:
     text_content = f"{delta_max:.2f}mm"
     text_color = "red"
 
+# 【修正点】文字化けを防ぐため、標準的なサンセリフ体フォントを明示的に指定
+font_style = {'family': 'sans-serif', 'weight': 'bold', 'size': 12}
 ax.text(L/2, display_y, text_content, 
-        color=text_color, ha="center", fontweight="bold", fontsize=12)
+        color=text_color, ha="center", fontdict=font_style)
 
-# 装飾
+# 装飾（グラフ内の文字は英語表記で統一し、文字化けを回避）
 ax.set_title(f"Span: {L}mm / {load_desc} / E: {E}", fontsize=12)
 ax.set_xlabel("Position (mm)")
 ax.set_ylabel("Deflection (mm)")
