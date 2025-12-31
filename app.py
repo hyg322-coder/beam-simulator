@@ -45,8 +45,8 @@ if mode == "等分布荷重 (全体)":
     M_max, Q_max = (w * L**2) / 8, (w * L) / 2
     m_diag = (w * x_vals / 2) * (L - x_vals)
     s_diag = (w * L / 2) - (w * x_vals)
-    delta_max = (5 * w * L**4) / (384 * E * I)
-    def get_delta(x): return (w * x * (L**3 - 2*L*x**2 + x**3)) / (24 * E * I)
+    delta_max = (5 * w * (L**4)) / (384 * E * I)
+    def get_delta(x): return (w * x * (L**3 - 2*L*(x**2) + (x**3))) / (24 * E * I)
 else:
     P = st.sidebar.number_input("P (N)", value=18200.0)
     M_max, Q_max = (P * L) / 4, P / 2
@@ -54,7 +54,7 @@ else:
     s_diag = np.where(x_vals < L/2, P/2, -P/2)
     delta_max = (P * (L**3)) / (48 * E * I)
     def get_delta(x): 
-        return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*L**2 - 4*(L-x)**2)) / (48 * E * I)
+        return (P * x * (3*(L**2) - 4*(x**2))) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*(L**2) - 4*((L-x)**2))) / (48 * E * I)
 
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
@@ -78,11 +78,23 @@ with c3:
     if delta_max <= L/300: st.success(f"OK (1/{ratio})")
     else: st.error("NG")
 
-# --- 5. グラフ描画 (モバイル究極・大迫力仕様) ---
+# --- 5. グラフ描画 (モバイル究極対応・大迫力仕様) ---
 st.markdown("### 📊 応力・変形図")
 
 fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 9.5))
 plt.subplots_adjust(hspace=0.6)
 
+# 共通設定用
+for ax in [ax_m, ax_s, ax_d]:
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
+    ax.grid(True, linestyle="--", alpha=0.3)
+    ax.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+    ax.plot(0, 0, '^k', markersize=10)
+    ax.plot(L, 0, '^k', markersize=10)
+    ax.set_xlim(-150, L + 150)
+    ax.tick_params(axis='both', labelsize=10)
+
 # M図: 20固定
-ax_m.xaxis.set_
+ax_m.set_title("M (kN-m)", loc='left', fontsize=12, fontweight='bold')
+ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
+ax_m.plot(x_vals, m_diag/1e6
