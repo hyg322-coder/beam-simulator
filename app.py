@@ -57,3 +57,55 @@ else:
         return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*L**2 - 4*(L-x)**2)) / (48 * E * I)
 
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
+ratio = int(L / delta_max) if delta_max > 0 else 0
+
+# --- 4. 結果表示 ---
+st.subheader("📋 断面算定結果")
+c1, c2, c3 = st.columns(3)
+
+with c1:
+    st.write("### 曲げ応力度検定")
+    st.metric("", f"{sigma_b:.2f} N/mm²")
+    if sigma_b <= fb:
+        st.success(f"### OK (≦{fb:.1f})")
+    else:
+        st.error("### NG")
+
+with c2:
+    st.write("### せん断応力度検定")
+    st.metric("", f"{tau:.2f} N/mm²")
+    if tau <= fs:
+        st.success(f"### OK (≦{fs:.1f})")
+    else:
+        st.error("### NG")
+
+with c3:
+    st.write("### 撓み検定")
+    st.metric("", f"{delta_max:.2f} mm")
+    if delta_max <= L/300:
+        st.success(f"### OK (1/{ratio})")
+    else:
+        st.error("### NG")
+
+# --- 5. 共通描画関数 ---
+def create_beam_plot(y_vals, color, y_label, y_lim_top, y_lim_bottom, text_y, text_content):
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
+    ax.tick_params(axis='both', labelsize=10)
+    ax.grid(True, linestyle="--", alpha=0.3)
+    ax.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+    ax.plot(0, 0, '^k', markersize=10)
+    ax.plot(L, 0, '^k', markersize=10)
+    ax.set_xlim(-150, L + 150)
+    
+    ax.fill_between(x_vals, y_vals, 0, color=color, alpha=0.15)
+    ax.plot(x_vals, y_vals, color=color, linewidth=3.0)
+    ax.set_ylabel(y_label, fontsize=10, fontweight='bold')
+    ax.set_ylim(y_lim_top, y_lim_bottom)
+    
+    if text_content != "":
+        ax.text(L/2, text_y, text_content, 
+                color=color, ha="center", va="bottom", fontsize=10, fontweight='bold')
+    return fig
+
+# ---
