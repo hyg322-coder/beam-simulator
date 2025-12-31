@@ -48,7 +48,7 @@ if mode == "等分布荷重 (全体)":
     s_diag = (w * L / 2) - (w * x_vals)
     delta_max = (5 * w * (L**4)) / (384 * E * I)
     def get_delta(x):
-        return (w * x * (L**3 - 2*L*(x**2) + (x**3))) / (24 * E * I)
+        return (w * x * (L**3 - 2 * L * (x**2) + (x**3))) / (24 * E * I)
 else:
     P = st.sidebar.number_input("P (N)", value=18200.0)
     M_max, Q_max = (P * L) / 4, P / 2
@@ -56,31 +56,4 @@ else:
     s_diag = np.where(x_vals < L/2, P/2, -P/2)
     delta_max = (P * (L**3)) / (48 * E * I)
     def get_delta(x):
-        return (P * x * (3*(L**2) - 4*(x**2))) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*(L**2) - 4*((L-x)**2))) / (48 * E * I)
-
-sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
-ratio = int(L / delta_max) if delta_max > 0 else 0
-
-# --- 4. 断面算定結果 (モバイル究極スリム表示) ---
-st.subheader("📋 断面算定結果")
-
-def compact_result_card(label, val_text, limit_val, is_ok):
-    color = "#28a745" if is_ok else "#dc3545"
-    bg_color = "#e9f7ef" if is_ok else "#fdecea"
-    status = "OK" if is_ok else "NG"
-    st.markdown(f"""
-        <div style="background-color: {bg_color}; border-radius: 6px; padding: 6px 12px; border: 1px solid {color}; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="flex-grow: 1;">
-                <div style="font-size: 11px; color: #555; font-weight: bold; margin-bottom: 1px;">{label}</div>
-                <div style="display: flex; align-items: baseline; gap: 8px;">
-                    <span style="font-size: 17px; font-weight: 800; color: #000;">{val_text}</span>
-                    <span style="font-size: 13px; color: #666; font-weight: bold;">≦ {limit_val}</span>
-                </div>
-            </div>
-            <div style="font-size: 28px; font-weight: 900; color: {color}; line-height: 1; padding-left: 10px;">{status}</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-compact_result_card("曲げ(M): σb", f"{sigma_b:.2f} N/mm²", f"{fb:.1f}", sigma_b <= fb)
-compact_result_card("せん断(S): τ", f"{tau:.2f} N/mm²", f"{fs:.1f}", tau <= fs)
-compact_result_card("たわみ(d): δ", f"{delta_max:.2f} mm", f"{L/300:.
+        return (P * x * (3*(L**2) - 4*(x**2))) / (48 * E * I) if x <= L/2 else
