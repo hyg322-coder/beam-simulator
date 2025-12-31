@@ -6,7 +6,7 @@ import matplotlib.ticker as ticker
 # ページ設定
 st.set_page_config(page_title="大梁断面算定シミュレーター", layout="wide")
 
-# 見出しを携帯向けに縮小
+# 見出し
 st.markdown("## 🏗️ 大梁断面算定シミュレーター")
 
 # --- 1. データベース ---
@@ -64,7 +64,7 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 断面算定結果 (実務仕様) ---
+# --- 4. 断面算定結果 ---
 st.subheader("📋 断面算定結果")
 
 def compact_result_card(label, val_text, limit_val, is_ok):
@@ -84,12 +84,10 @@ def compact_result_card(label, val_text, limit_val, is_ok):
         </div>
     """, unsafe_allow_html=True)
 
-# 制限値の表示を整理
+l_300_limit = L/300
 compact_result_card("曲げ応力度検定(M): σb", f"{sigma_b:.2f} N/mm²", f"{fb:.1f}", sigma_b <= fb)
 compact_result_card("剪断応力度検定(S): τ", f"{tau:.2f} N/mm²", f"{fs:.1f}", tau <= fs)
-# 撓み制限を「L/300 かつ 20mm」として表示
-l_300_limit = L/300
-compact_result_card("撓み検定(d): δ", f"{delta_max:.2f} mm", f"{l_300_limit:.1f} (L/300) かつ 20mm以下", delta_max <= 20 and delta_max <= l_300_limit)
+compact_result_card("撓み検定(d): δ", f"{delta_max:.2f} mm", f"{l_300_limit:.1f}(1/300) かつ 20mm以下", delta_max <= 20 and delta_max <= l_300_limit)
 
 # --- 5. グラフ描画 ---
 st.markdown("### 📊 応力・変形図")
@@ -119,4 +117,18 @@ st.markdown("#### ■ 剪断力図 (S)")
 fig_s, ax_s = plt.subplots(figsize=(10, 3.2))
 decorate(ax_s, "kN", -20, 20)
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
-ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=
+ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.5)
+ax_s.text(20, (Q_max/1000) + 1.2, f"{Q_max/1000:.1f}", color="darkorange", ha="left", va="bottom", fontsize=22, fontweight='black')
+ax_s.text(L-20, (-Q_max/1000) - 1.2, f"{-Q_max/1000:.1f}", color="darkorange", ha="right", va="top", fontsize=22, fontweight='black')
+st.pyplot(fig_s)
+
+# d図
+st.markdown("#### ■ 撓み図 (d)")
+fig_d, ax_d = plt.subplots(figsize=(10, 3.2))
+decorate(ax_d, "mm", 30, -5)
+y_d_plot = [get_delta(x) for x in x_vals]
+ax_d.fill_between(x_vals, y_d_plot, 0, color="skyblue", alpha=0.15)
+ax_d.plot(x_vals, y_d_plot, color="blue", linewidth=3.5)
+ax_d.text(L/2, (delta_max + 1.5), f"{delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=24, fontweight='black')
+ax_d.set_xlabel("Position (mm)", fontsize=11)
+st.pyplot(fig_d)
