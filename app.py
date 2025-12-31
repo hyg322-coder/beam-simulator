@@ -44,7 +44,7 @@ if mode == "等分布荷重 (全体)":
     w = st.sidebar.number_input("w (N/mm)", value=5.0)
     M_max, Q_max = (w * L**2) / 8, (w * L) / 2
     m_diag = (w * x_vals / 2) * (L - x_vals)
-    s_diag = (w * L / 2) - (w * x_vals) # 左端プラス・右端マイナスの右下がり
+    s_diag = (w * L / 2) - (w * x_vals) # 左プラス・右マイナスの右下がり
     delta_max = (5 * w * L**4) / (384 * E * I)
     def get_delta(x): return (w * x * (L**3 - 2*L*x**2 + x**3)) / (24 * E * I)
 else:
@@ -92,15 +92,15 @@ ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=1.5)
 decorate(ax_m, "M", "kN-m")
 ax_m.invert_yaxis()
-# 数値をグラフの外側（上側）に配置
-ax_m.text(L/2, -0.5, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="bottom", fontsize=7, fontweight='bold')
+# 数値をグラフの「上（基線側）」に表示
+ax_m.text(L/2, -0.2, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="bottom", fontsize=7, fontweight='bold')
 
-# S図: 左プラス(上)・右マイナス(下)の右下がりに修正
+# S図: 軸の向きを制御して右下がりに固定
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=1.5)
 lim_s = max(abs(Q_max/1000) * 1.6, 5)
-ax_s.set_ylim(-lim_s, lim_s) # y軸範囲を固定
-ax_s.invert_yaxis() # 軸を反転させることで、数式上のプラスが「画面上の上」に来るよう調整
+# 軸をあえて反転させず、数式の結果をそのまま表示（左プラス=上、右マイナス=下）
+ax_s.set_ylim(-lim_s, lim_s) 
 decorate(ax_s, "S", "kN")
 ax_s.text(0, Q_max/1000, f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=7, fontweight='bold')
 ax_s.text(L, -Q_max/1000, f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=7, fontweight='bold')
