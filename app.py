@@ -44,14 +44,14 @@ if mode == "等分布荷重 (全体)":
     w = st.sidebar.number_input("w (N/mm)", value=5.0)
     M_max, Q_max = (w * L**2) / 8, (w * L) / 2
     m_diag = (w * x_vals / 2) * (L - x_vals)
-    s_diag = (w * L / 2) - (w * x_vals) # 【修正】左プラス・右マイナス
+    s_diag = (w * L / 2) - (w * x_vals) # 左プラス(上)・右マイナス(下)の右下がり
     delta_max = (5 * w * L**4) / (384 * E * I)
     def get_delta(x): return (w * x * (L**3 - 2*L*x**2 + x**3)) / (24 * E * I)
 else:
     P = st.sidebar.number_input("P (N)", value=18200.0)
     M_max, Q_max = (P * L) / 4, P / 2
     m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/2)
-    s_diag = np.where(x_vals < L/2, P/2, -P/2) # 【修正】左プラス・右マイナス
+    s_diag = np.where(x_vals < L/2, P/2, -P/2) # 左プラス(上)・右マイナス(下)
     delta_max = (P * L**3) / (48 * E * I)
     def get_delta(x): 
         return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*L**2 - 4*(L-x)**2)) / (48 * E * I)
@@ -64,21 +64,21 @@ st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
 with c1:
     st.metric("曲げ (M) : σb", f"{sigma_b:.2f} N/mm²")
-    res1 = st.success(f"OK (≦{fb:.1f})") if sigma_b <= fb else st.error("NG")
+    _ = st.success(f"OK (≦{fb:.1f})") if sigma_b <= fb else st.error("NG")
 with c2:
     st.metric("せん断 (S) : τ", f"{tau:.2f} N/mm²")
-    res2 = st.success(f"OK (≦{fs:.1f})") if tau <= fs else st.error("NG")
+    _ = st.success(f"OK (≦{fs:.1f})") if tau <= fs else st.error("NG")
 with c3:
     st.metric("たわみ (d) : δ", f"{delta_max:.2f} mm")
-    res3 = st.success(f"OK (1/{ratio})") if delta_max <= L/300 else st.error("NG")
+    _ = st.success(f"OK (1/{ratio})") if delta_max <= L/300 else st.error("NG")
 
-# --- 5. グラフ描画 (全軸に距離数値を表示) ---
+# --- 5. グラフ描画 ---
 st.markdown("### 📊 応力・変形図")
 fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 4.2))
-plt.subplots_adjust(hspace=1.5)
+plt.subplots_adjust(hspace=1.6)
 
 def decorate(ax, label_text, unit):
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(455)) # 455mmピッチ
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
     ax.tick_params(axis='both', labelsize=7)
     ax.grid(True, linestyle="--", alpha=0.3)
     ax.plot([0, L], [0, 0], 'k-', linewidth=0.8)
@@ -87,18 +87,20 @@ def decorate(ax, label_text, unit):
     ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=8, fontweight='bold', pad=2)
     ax.set_xlim(-100, L + 100)
 
-# M図
+# M図: 下に凸(引張側) / 数値をグラフの上に表示
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=1.5)
 decorate(ax_m, "M", "kN-m")
 ax_m.invert_yaxis()
-ax_m.text(L/2, M_max/1e6, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="top", fontsize=7, fontweight='bold')
+# 数値をグラフの上に表示 (va='bottom' で反転軸の上側に配置)
+ax_m.text(L/2, M_max/1e6, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="bottom", fontsize=7, fontweight='bold')
 
-# S図 (傾き修正：左端プラス、右端マイナス)
+# S図: 左プラス(上)・右マイナス(下)の右下がりに固定
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=1.5)
 lim_s = max(abs(Q_max/1000) * 1.6, 5)
-ax_s.set_ylim(lim_s, -lim_s) # 上をプラス、下をマイナス
+ax_s.set_ylim(-lim_s, lim_s) # 下をマイナス、上をプラスに明示的に設定
+ax_s.invert_yaxis() # 軸を反転させて左が上(プラス)になるように調整
 decorate(ax_s, "S", "kN")
 ax_s.text(0, Q_max/1000, f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=7, fontweight='bold')
 ax_s.text(L, -Q_max/1000, f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=7, fontweight='bold')
@@ -109,7 +111,7 @@ ax_d.fill_between(x_vals, y_d, 0, color="skyblue", alpha=0.15)
 ax_d.plot(x_vals, y_d, color="blue", linewidth=1.5)
 decorate(ax_d, "d", "mm")
 ax_d.invert_yaxis()
-ax_d.set_ylim(60, -5) # 画面収まり改善
+ax_d.set_ylim(60, -10)
 ax_d.text(L/2, delta_max, f"d={delta_max:.1f}", color="blue", ha="center", va="top", fontsize=7, fontweight='bold')
 
 ax_d.set_xlabel("Position (mm)", fontsize=8)
