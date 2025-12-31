@@ -90,14 +90,14 @@ def decorate(ax, label_text, unit):
     ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=8, fontweight='bold', pad=2)
     ax.set_xlim(-100, L + 100)
 
-# M図: 反転軸に合わせて文字位置を「曲線のすぐ上」に調整
+# M図: 反転した軸に合わせて数値を「曲線の上（基線寄り）」に配置
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=1.5)
 decorate(ax_m, "M", "kN-m")
 ax_m.invert_yaxis()
-# va="top" とマイナスオフセットの組み合わせで、線のすぐ上に配置
-ax_m.text(L/2, (M_max/1e6) - 0.2, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
-          color="forestgreen", ha="center", va="top", fontsize=7, fontweight='bold')
+# 【最重要修正】座標をM_maxよりわずかに大きくし、va="bottom"にすることで線の上に配置
+ax_m.text(L/2, M_max/1e6 + 0.5, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
+          color="forestgreen", ha="center", va="bottom", fontsize=7, fontweight='bold')
 
 # S図: 左プラス(上)・右マイナスの右下がり
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
