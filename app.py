@@ -60,37 +60,33 @@ with col3:
     else:
         st.error(f"判定: NG (1/{limit} オーバー)")
 
-# --- グラフ描画 ---
-st.subheader("たわみ曲線グラフ")
-
-x = np.linspace(0, L, 100)
-# たわみ曲線式（下向きを負としてプロット用に調整）
-y = -(w * x) / (24 * E * I) * (L**3 - 2 * L * x**2 + x**3)
+# 4. グラフ描画
+st.subheader("Deflection Graph") # タイトルを英語化
 
 fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(x, y, label='たわみ曲線', color='blue', linewidth=3)
-ax.fill_between(x, y, 0, color='skyblue', alpha=0.3)
-ax.axhline(0, color='black', linestyle='--', linewidth=1) # 梁元の位置
 
-# グラフの体裁
-ax.set_title(f"スパン {L}mm / 断面 {b}x{h}mm / {selected_material}", fontsize=12)
-ax.set_xlabel("位置 (mm)")
-ax.set_ylabel("変位 (mm)")
-ax.grid(True, linestyle=':', alpha=0.6)
+# グラフのプロット（英語ラベル）
+ax.plot(x, y, label="Deflection Curve", color="blue", linewidth=3)
+ax.fill_between(x, y, 0, color="skyblue", alpha=0.3)
+
+# タイトルと軸ラベル（文字化け回避のため英語表記）
+ax.set_title(f"Span: {L}mm / Section: {b}x{h}mm / E: {E} N/mm2", fontsize=14)
+ax.set_xlabel("Position (mm)", fontsize=12)
+ax.set_ylabel("Deflection (mm)", fontsize=12)
+
+# ★ここがポイント：Y軸の表示範囲を調整
+# たわみが小さくても、最低でも「-25mm」までは画面に表示する設定にしました。
+# これにより、数ミリのたわみなら「ほんの少したわんでいる」ようにリアルに見えます。
+current_limit = -delta_max * 1.5 # 現在のたわみの1.5倍
+view_limit = min(-25, current_limit) # ただし最低でも-25mmまでは確保
+ax.set_ylim(view_limit, 5) # Y軸をセット
+
+# グリッドと凡例
+ax.grid(True, linestyle="--", alpha=0.6)
 ax.legend()
 
-# 最大点にマーカー
-mid_idx = len(x) // 2
-ax.plot(x[mid_idx], y[mid_idx], 'ro')
-ax.text(x[mid_idx], y[mid_idx]*1.1, f' {delta_max:.2f}mm', color='red', fontweight='bold')
+# 最大たわみ位置のプロット
+ax.plot(L/2, -delta_max, "ro")
+ax.text(L/2, -delta_max - (abs(view_limit)*0.05), f"{delta_max:.2f}mm", color="red", ha="center", fontsize=12, fontweight="bold")
 
-# Streamlitにグラフを表示
 st.pyplot(fig)
-
-# --- 補足情報（技術者向けアピール） ---
-st.markdown("---")
-st.markdown(f"""
-**計算式情報:** 断面二次モーメント $I = {I:.0f} mm^4$  
-計算式: $\delta_{{max}} = \\frac{{5 w L^4}}{{384 E I}}$  
-※本ツールは概算検討用です。詳細な構造設計は別途行ってください。
-""")
