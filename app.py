@@ -75,45 +75,27 @@ with c3:
     if delta_max <= L/300: st.success(f"OK (1/{ratio})")
     else: st.error("NG")
 
-# --- 5. グラフ描画 ---
-st.markdown("### 📊 応力・変形図")
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 8.5))
-plt.subplots_adjust(hspace=0.6)
-
-def decorate(ax, label_text, unit):
+# --- 5. 各図の共通描画設定 ---
+def get_base_plot():
+    fig, ax = plt.subplots(figsize=(10, 3.5)) # 各図を独立させ高さを確保
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
     ax.tick_params(axis='both', labelsize=10)
     ax.grid(True, linestyle="--", alpha=0.3)
     ax.plot([0, L], [0, 0], 'k-', linewidth=1.5)
     ax.plot(0, 0, '^k', markersize=10)
     ax.plot(L, 0, '^k', markersize=10)
-    ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=12, fontweight='bold')
     ax.set_xlim(-150, L + 150)
+    return fig, ax
 
-# M図: Y軸20固定、下に凸
+# --- 6. 個別描画エリア ---
+st.markdown("---")
+
+# 1. 曲げモーメント図
+st.subheader("📊 曲げモーメント図 (Bending Moment Diagram)")
+[Image of bending moment diagram for a simply supported beam]
+fig_m, ax_m = get_base_plot()
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
-decorate(ax_m, "M", "kN-m")
-ax_m.set_ylim(20, -5) # 下が20、上が-5
-ax_m.text(L/2, M_max/1e6 + 0.5, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", 
-          color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
-
-# S図: Y軸20固定、右下がりに固定
-ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
-ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
-decorate(ax_s, "S", "kN")
-# 重要：第1引数(ボトム)を-20、第2引数(トップ)を20にすることで、左端(正)が上、右端(負)が下になる
-ax_s.set_ylim(-20, 20) 
-ax_s.text(0, Q_max/1000, f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
-ax_s.text(L, -Q_max/1000, f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
-
-# d図: Y軸30固定
-y_d = np.array([get_delta(x) for x in x_vals])
-ax_d.fill_between(x_vals, y_d, 0, color="skyblue", alpha=0.15)
-ax_d.plot(x_vals, y_d, color="blue", linewidth=3.0)
-decorate(ax_d, "d", "mm")
-ax_d.set_ylim(30, -5) # 下が30、上が-5
-ax_d.text(L/2, delta_max + 1.0, f"d={delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
-
-ax_d.set_xlabel("Position (mm)", fontsize=11)
-st.pyplot(fig)
+ax_m.set_ylabel("M (kN-m)", fontsize=10, fontweight='bold')
+ax_m.set_ylim(20, -5) # 20固定
+ax_m.text(L/2, M_max/1e6 + 0.
