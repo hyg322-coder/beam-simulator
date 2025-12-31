@@ -46,14 +46,15 @@ if mode == "等分布荷重 (全体)":
     m_diag = (w * x_vals / 2) * (L - x_vals)
     s_diag = (w * L / 2) - (w * x_vals)
     delta_max = (5 * w * (L**4)) / (384 * E * I)
-    def get_delta(x): return (w * x * (L**3 - 2*L*(x**2) + (x**3))) / (24 * E * I)
+    def get_delta(x):
+        return (w * x * (L**3 - 2*L*(x**2) + (x**3))) / (24 * E * I)
 else:
     P = st.sidebar.number_input("P (N)", value=18200.0)
     M_max, Q_max = (P * L) / 4, P / 2
     m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/2)
     s_diag = np.where(x_vals < L/2, P/2, -P/2)
     delta_max = (P * (L**3)) / (48 * E * I)
-    def get_delta(x): 
+    def get_delta(x):
         return (P * x * (3*(L**2) - 4*(x**2))) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*(L**2) - 4*((L-x)**2))) / (48 * E * I)
 
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
@@ -94,7 +95,7 @@ ax_m.set_title("M (kN-m)", loc='left', fontsize=12, fontweight='bold')
 ax_m.set_xlim(-150, L + 150)
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
-ax_m.set_ylim(20, -5) # 下向きを正
+ax_m.set_ylim(20, -5) # 下向きを正とする
 ax_m.text(L/2, (M_max/1e6) + 0.3, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
 
 # S図: 20固定・右下がり(左端が上)
@@ -107,7 +108,7 @@ ax_s.set_title("S (kN)", loc='left', fontsize=12, fontweight='bold')
 ax_s.set_xlim(-150, L + 150)
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
-ax_s.set_ylim(-20, 20) # 上が+20
+ax_s.set_ylim(-20, 20) # 上が+20、下が-20
 ax_s.text(0, (Q_max/1000), f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
 ax_s.text(L, (-Q_max/1000), f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
 
@@ -119,4 +120,12 @@ ax_d.plot(0, 0, '^k', markersize=10)
 ax_d.plot(L, 0, '^k', markersize=10)
 ax_d.set_title("d (mm)", loc='left', fontsize=12, fontweight='bold')
 ax_d.set_xlim(-150, L + 150)
-y_d = np.array([get_delta
+y_d = np.array([get_delta(x) for x in x_vals])
+ax_d.fill_between(x_vals, y_d, 0, color="skyblue", alpha=0.15)
+ax_d.plot(x_vals, y_d, color="blue", linewidth=3.0)
+ax_d.set_ylim(30, -5) # 下向きを正とする
+ax_d.text(L/2, (delta_max + 1.0), f"d={delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
+ax_d.set_xlabel("Position (mm)", fontsize=11)
+
+# 【最終実行】グラフを表示
+st.pyplot(fig)
