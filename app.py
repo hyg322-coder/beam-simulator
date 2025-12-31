@@ -42,21 +42,21 @@ if mode == "等分布荷重 (全体)":
     w = st.sidebar.number_input("w (N/mm)", value=5.0)
     M_max, Q_max = (w * L**2) / 8, (w * L) / 2
     m_diag = (w * x_vals / 2) * (L - x_vals)
-    s_diag = (w * L / 2) - (w * x_vals)
+    s_diag = (w * L / 2) - (w * x_vals) # 左端x=0でプラス(上)
     delta_max = (5 * w * L**4) / (384 * E * I)
     def get_delta(x): return (w * x * (L**3 - 2*L*x**2 + x**3)) / (24 * E * I)
 else:
     P = st.sidebar.number_input("P (N)", value=18200.0)
     M_max, Q_max = (P * L) / 4, P / 2
     m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/2)
-    s_diag = np.where(x_vals < L/2, P/2, -P/2)
+    s_diag = np.where(x_vals < L/2, P/2, -P/2) # 左半分がプラス(上)
     delta_max = (P * L**3) / (48 * E * I)
     def get_delta(x): return (P * x * (3*L**2 - 4*x**2)) / (48 * E * I) if x <= L/2 else (P * (L-x) * (3*L**2 - 4*(L-x)**2)) / (48 * E * I)
 
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 結果表示（記号 M, S, d を追加） ---
+# --- 4. 結果表示 ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
 with c1:
@@ -71,17 +71,18 @@ with c3:
 
 # --- 5. グラフ描画 ---
 st.markdown("### 📊 応力・変形図")
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 3.8), sharex=True)
-plt.subplots_adjust(hspace=1.5)
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 4.0)) # 距離表示のため少し高さを戻す
+plt.subplots_adjust(hspace=1.6)
 
 def decorate(ax, label_text, unit):
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(455)) # 455間隔
     ax.tick_params(axis='both', labelsize=7)
     ax.grid(True, linestyle="--", alpha=0.3)
     ax.plot([0, L], [0, 0], 'k-', linewidth=0.8)
     ax.plot(0, 0, '^k', markersize=5)
     ax.plot(L, 0, '^k', markersize=5)
-    ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=8, fontweight='bold', pad=2)
+    ax.set_title(f"{label_text} ({unit})", loc='left', fontsize=8, fontweight='bold')
+    ax.set_xlim(-100, L + 100) # 端の数字が見えるように少し広げる
 
 # M図
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
@@ -90,7 +91,7 @@ decorate(ax_m, "M", "kN-m")
 ax_m.invert_yaxis()
 ax_m.text(L/2, M_max/1e6, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="top", fontsize=7, fontweight='bold')
 
-# S図
+# S図 (符号修正：左が上)
 ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=1.5)
 lim_s = max(abs(Q_max/1000) * 1.6, 5)
@@ -105,9 +106,8 @@ ax_d.fill_between(x_vals, y_d, 0, color="skyblue", alpha=0.15)
 ax_d.plot(x_vals, y_d, color="blue", linewidth=1.5)
 decorate(ax_d, "d", "mm")
 ax_d.invert_yaxis()
-ax_d.set_ylim(60, -25)
-ax_d.annotate('', xy=(0, -12), xytext=(L, -12), arrowprops=dict(arrowstyle='<->', color='gray', lw=0.6))
-ax_d.text(L/2, -15, f"L={L}mm", ha='center', color='gray', fontsize=8, fontweight='bold')
+ax_d.set_ylim(60, -5) # 寸法線を消した分スリムに
 ax_d.text(L/2, delta_max, f"d={delta_max:.1f}", color="blue", ha="center", va="top", fontsize=8, fontweight='bold')
 
+ax_d.set_xlabel("Position (mm)", fontsize=8)
 st.pyplot(fig)
