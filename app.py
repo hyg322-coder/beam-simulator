@@ -43,7 +43,91 @@ x_vals = np.linspace(0, L, 100)
 
 if mode == "等分布荷重 (全体)":
     w = st.sidebar.number_input("w (N/mm)", value=5.0)
-    M_max, Q_max = (w * L**2) / 8, (w * L) / 2
+    M_max, Q_max = (w * (L**2)) / 8, (w * L) / 2
     m_diag = (w * x_vals / 2) * (L - x_vals)
     s_diag = (w * L / 2) - (w * x_vals)
-    delta_max = (5
+    delta_max = (5 * w * (L**4)) / (384 * E * I)
+    def get_delta(x):
+        return (w * x * (L**3 - 2 * L * (x**2) + (x**3))) / (24 * E * I)
+else:
+    P = st.sidebar.number_input("P (N)", value=18200.0)
+    M_max, Q_max = (P * L) / 4, P / 2
+    m_diag = np.where(x_vals < L/2, (P * x_vals)/2, (P * (L - x_vals))/2)
+    s_diag = np.where(x_vals < L/2, P/2, -P/2)
+    delta_max = (P * (L**3)) / (48 * E * I)
+    def get_delta(x):
+        if x <= L/2:
+            return (P * x * (3 * (L**2) - 4 * (x**2))) / (48 * E * I)
+        else:
+            return (P * (L-x) * (3 * (L**2) - 4 * ((L-x)**2))) / (48 * E * I)
+
+sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
+ratio = int(L / delta_max) if delta_max > 0 else 0
+
+# --- 4. 断面算定結果 (モバイル横長スリム表示) ---
+st.subheader("📋 断面算定結果")
+
+def compact_result_card(label, val_text, limit_val, is_ok):
+    color = "#28a745" if is_ok else "#dc3545"
+    bg_color = "#e9f7ef" if is_ok else "#fdecea"
+    status = "OK" if is_ok else "NG"
+    st.markdown(f"""
+        <div style="background-color: {bg_color}; border-radius: 6px; padding: 6px 12px; border: 1px solid {color}; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex-grow: 1;">
+                <div style="font-size: 11px; color: #555; font-weight: bold; margin-bottom: 1px;">{label}</div>
+                <div style="display: flex; align-items: baseline; gap: 8px;">
+                    <span style="font-size: 17px; font-weight: 800; color: #000;">{val_text}</span>
+                    <span style="font-size: 13px; color: #666; font-weight: bold;">≦ {limit_val}</span>
+                </div>
+            </div>
+            <div style="font-size: 28px; font-weight: 900; color: {color}; line-height: 1; padding-left: 10px;">{status}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+compact_result_card("曲げ(M): σb", f"{sigma_b:.2f} N/mm²", f"{fb:.1f}", sigma_b <= fb)
+compact_result_card("せん断(S): τ", f"{tau:.2f} N/mm²", f"{fs:.1f}", tau <= fs)
+compact_result_card("たわみ(d): δ", f"{delta_max:.2f} mm", f"{L/300:.1f} (1/300)", delta_max <= L/300)
+
+# --- 5. グラフ描画 (大迫力数値) ---
+st.markdown("### 📊 応力・変形図")
+
+def decorate(ax, unit, y_max, y_min):
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
+    ax.grid(True, linestyle="--", alpha=0.3)
+    ax.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+    ax.plot(0, 0, '^k', markersize=10)
+    ax.plot(L, 0, '^k', markersize=10)
+    ax.set_xlim(-150, L + 150)
+    ax.set_ylabel(unit, fontsize=10)
+    ax.set_ylim(y_max, y_min)
+    ax.tick_params(axis='both', labelsize=9)
+
+# M図
+st.markdown("#### ■ 曲げモーメント図 (M)")
+fig_m, ax_m = plt.subplots(figsize=(10, 3.2))
+decorate(ax_m, "kN-m", 20, -5)
+ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
+ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.5)
+ax_m.text(L/2, (M_max/1e6) + 1.2, f"{M_max/1e6:.2f}", color="forestgreen", ha="center", va="bottom", fontsize=24, fontweight='black')
+st.pyplot(fig_m)
+
+# S図
+st.markdown("#### ■ せん断力図 (S)")
+fig_s, ax_s = plt.subplots(figsize=(10, 3.2))
+decorate(ax_s, "kN", -20, 20)
+ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
+ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.5)
+ax_s.text(20, (Q_max/1000) + 1.2, f"{Q_max/1000:.1f}", color="darkorange", ha="left", va="bottom", fontsize=22, fontweight='black')
+ax_s.text(L-20, (-Q_max/1000) - 1.2, f"{-Q_max/1000:.1f}", color="darkorange", ha="right", va="top", fontsize=22, fontweight='black')
+st.pyplot(fig_s)
+
+# d図
+st.markdown("#### ■ たわみ図 (d)")
+fig_d, ax_d = plt.subplots(figsize=(10, 3.2))
+decorate(ax_d, "mm", 30, -5)
+y_d_plot = [get_delta(x) for x in x_vals]
+ax_d.fill_between(x_vals, y_d_plot, 0, color="skyblue", alpha=0.15)
+ax_d.plot(x_vals, y_d_plot, color="blue", linewidth=3.5)
+ax_d.text(L/2, (delta_max + 1.5), f"{delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=24, fontweight='black')
+ax_d.set_xlabel("Position (mm)", fontsize=11)
+st.pyplot(fig_d)
