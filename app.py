@@ -59,69 +59,67 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 結果表示（デバッグ表示が出ないクリーンな書き方） ---
+# --- 4. 結果表示 ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
-
 with c1:
     st.metric("曲げ σb", f"{sigma_b:.2f} N/mm²")
     if sigma_b <= fb: st.success(f"OK (≦{fb:.1f})")
     else: st.error(f"NG (>{fb:.1f})")
-
 with c2:
     st.metric("せん断 τ", f"{tau:.2f} N/mm²")
     if tau <= fs: st.success(f"OK (≦{fs:.1f})")
     else: st.error(f"NG (>{fs:.1f})")
-
 with c3:
     st.metric("最大たわみ δ", f"{delta_max:.2f} mm")
     if delta_max <= L/300: st.success(f"OK (1/{ratio})")
     else: st.error(f"NG (1/{ratio})")
 
-# --- 5. グラフ描画 (極限までコンパクト化：縦4.5) ---
+# --- 5. グラフ描画 (画面収まり重視：縦4.2) ---
 st.markdown("---")
 st.markdown("### 📊 応力・変形図")
-fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 4.5), sharex=True)
-plt.subplots_adjust(hspace=1.1)
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 4.2), sharex=True)
+plt.subplots_adjust(hspace=1.2) # 図の間の隙間を確保
 
 # 共通デコレーション
 def decorate(ax, title):
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
     ax.tick_params(axis='both', labelsize=7)
     ax.grid(True, linestyle="--", alpha=0.3)
-    ax.set_title(title, loc='left', fontsize=8, fontweight='bold', pad=3)
+    ax.set_title(title, loc='left', fontsize=8, fontweight='bold', pad=5)
     ax.plot([0, L], [0, 0], 'k-', linewidth=0.5)
     ax.plot(0, 0, '^k', markersize=4) # 左支持点
     ax.plot(L, 0, '^k', markersize=4) # 右支持点
 
-# M図 (曲げ)
-ax_m.fill_between(x_vals, m_diag/1000000, 0, color="green", alpha=0.2)
+# 1. M図 (曲げ)
+ax_m.fill_between(x_vals, m_diag/1000000, 0, color="green", alpha=0.15)
 ax_m.plot(x_vals, m_diag/1000000, color="forestgreen", linewidth=1.2)
 ax_m.set_ylabel("M (kN-m)", fontsize=7)
 ax_m.invert_yaxis()
 decorate(ax_m, "Bending Moment Diagram (M)")
-ax_m.text(L/2, M_max/1000000, f"{M_max/1000000:.2f}", color="forestgreen", ha="center", va="top", fontsize=7, fontweight='bold')
+ax_m.text(L/2, M_max/1000000, f"Mmax={M_max/1000000:.2f}", color="forestgreen", ha="center", va="top", fontsize=7, fontweight='bold')
 
-# S図 (せん断)
-ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.2)
+# 2. S図 (せん断)
+ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
 ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=1.2)
 ax_s.set_ylabel("S (kN)", fontsize=7)
 decorate(ax_s, "Shear Force Diagram (S)")
-ax_s.text(0, Q_max/1000, f"{Q_max/1000:.1f}", color="darkorange", ha="left", va="bottom", fontsize=7)
-ax_s.text(L, -Q_max/1000, f"{-Q_max/1000:.1f}", color="darkorange", ha="right", va="top", fontsize=7)
+ax_s.text(0, Q_max/1000, f"Q={Q_max/1000:.1f}", color="darkorange", ha="left", va="bottom", fontsize=7)
+ax_s.text(L, -Q_max/1000, f"Q={-Q_max/1000:.1f}", color="darkorange", ha="right", va="top", fontsize=7)
 
-# δ図 (たわみ + 寸法線)
+# 3. δ図 (たわみ + 寸法線)
 y_delta = np.array([get_delta(x) for x in x_vals])
-ax_d.fill_between(x_vals, y_delta, 0, color="skyblue", alpha=0.2)
+ax_d.fill_between(x_vals, y_delta, 0, color="skyblue", alpha=0.15)
 ax_d.plot(x_vals, y_delta, color="blue", linewidth=1.2)
 ax_d.set_ylabel("δ (mm)", fontsize=7)
 decorate(ax_d, "Deflection Curve (δ)")
 ax_d.invert_yaxis()
-ax_d.set_ylim(60, -8)
-# 寸法線
-ax_d.annotate('', xy=(0, -4), xytext=(L, -4), arrowprops=dict(arrowstyle='<->', color='gray', lw=0.5))
-ax_d.text(L/2, -5, f"L={L}", ha='center', va='bottom', color='gray', fontsize=7)
-ax_d.text(L/2, delta_max, f"{delta_max:.1f}", color="blue", ha="center", va="top", fontsize=7, fontweight='bold')
+ax_d.set_ylim(60, -15) # 寸法線のために上に余白
+
+# 距離（寸法線）の追加
+ax_d.annotate('', xy=(0, -8), xytext=(L, -8), arrowprops=dict(arrowstyle='<->', color='gray', lw=0.5))
+ax_d.text(L/2, -10, f"L = {L} mm", ha='center', va='bottom', color='gray', fontsize=7, fontweight='bold')
+ax_d.text(L/2, delta_max, f"dmax={delta_max:.1f}", color="blue", ha="center", va="top", fontsize=7, fontweight='bold')
 
 ax_d.set_xlabel("Position (mm)", fontsize=7)
 st.pyplot(fig)
