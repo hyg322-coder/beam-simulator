@@ -78,23 +78,45 @@ with c3:
     if delta_max <= L/300: st.success(f"OK (1/{ratio})")
     else: st.error("NG")
 
-# --- 5. グラフ描画 (モバイル究極対応・大迫力仕様) ---
+# --- 5. グラフ描画 (モバイル究極・大迫力仕様) ---
 st.markdown("### 📊 応力・変形図")
 
 fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 9.5))
 plt.subplots_adjust(hspace=0.6)
 
-# 共通設定用
-for ax in [ax_m, ax_s, ax_d]:
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
-    ax.grid(True, linestyle="--", alpha=0.3)
-    ax.plot([0, L], [0, 0], 'k-', linewidth=1.5)
-    ax.plot(0, 0, '^k', markersize=10)
-    ax.plot(L, 0, '^k', markersize=10)
-    ax.set_xlim(-150, L + 150)
-    ax.tick_params(axis='both', labelsize=10)
-
 # M図: 20固定
+ax_m.xaxis.set_major_locator(ticker.MultipleLocator(455))
+ax_m.grid(True, linestyle="--", alpha=0.3)
+ax_m.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+ax_m.plot(0, 0, '^k', markersize=10)
+ax_m.plot(L, 0, '^k', markersize=10)
 ax_m.set_title("M (kN-m)", loc='left', fontsize=12, fontweight='bold')
+ax_m.set_xlim(-150, L + 150)
 ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
-ax_m.plot(x_vals, m_diag/1e6
+ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
+ax_m.set_ylim(20, -5) # 下向きを正
+ax_m.text(L/2, (M_max/1e6) + 0.3, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
+
+# S図: 20固定・右下がり(左端が上)
+ax_s.xaxis.set_major_locator(ticker.MultipleLocator(455))
+ax_s.grid(True, linestyle="--", alpha=0.3)
+ax_s.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+ax_s.plot(0, 0, '^k', markersize=10)
+ax_s.plot(L, 0, '^k', markersize=10)
+ax_s.set_title("S (kN)", loc='left', fontsize=12, fontweight='bold')
+ax_s.set_xlim(-150, L + 150)
+ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
+ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
+ax_s.set_ylim(-20, 20) # 上が+20
+ax_s.text(0, (Q_max/1000), f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
+ax_s.text(L, (-Q_max/1000), f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
+
+# d図: 30固定、大迫力のしなり
+ax_d.xaxis.set_major_locator(ticker.MultipleLocator(455))
+ax_d.grid(True, linestyle="--", alpha=0.3)
+ax_d.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+ax_d.plot(0, 0, '^k', markersize=10)
+ax_d.plot(L, 0, '^k', markersize=10)
+ax_d.set_title("d (mm)", loc='left', fontsize=12, fontweight='bold')
+ax_d.set_xlim(-150, L + 150)
+y_d = np.array([get_delta
