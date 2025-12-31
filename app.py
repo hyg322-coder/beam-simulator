@@ -75,9 +75,9 @@ with c3:
     if delta_max <= L/300: st.success(f"OK (1/{ratio})")
     else: st.error("NG")
 
-# --- 5. 各図の共通描画設定 ---
-def get_base_plot():
-    fig, ax = plt.subplots(figsize=(10, 3.5)) # 各図を独立させ高さを確保
+# --- 5. 共通描画関数 ---
+def create_beam_plot(y_vals, color, y_label, y_lim_top, y_lim_bottom, text_y, text_content, invert=False):
+    fig, ax = plt.subplots(figsize=(10, 3.8))
     ax.xaxis.set_major_locator(ticker.MultipleLocator(455))
     ax.tick_params(axis='both', labelsize=10)
     ax.grid(True, linestyle="--", alpha=0.3)
@@ -85,17 +85,40 @@ def get_base_plot():
     ax.plot(0, 0, '^k', markersize=10)
     ax.plot(L, 0, '^k', markersize=10)
     ax.set_xlim(-150, L + 150)
-    return fig, ax
+    
+    ax.fill_between(x_vals, y_vals, 0, color=color, alpha=0.15)
+    ax.plot(x_vals, y_vals, color=color, linewidth=3.0)
+    ax.set_ylabel(y_label, fontsize=10, fontweight='bold')
+    
+    # 軸の範囲固定
+    ax.set_ylim(y_lim_top, y_lim_bottom)
+    
+    # 数値テキストの配置
+    ax.text(L/2 if text_y != 0 else 10, text_y, text_content, 
+            color=color, ha="center" if text_y != 0 else "left", va="bottom", fontsize=10, fontweight='bold')
+    
+    return fig
 
-# --- 6. 個別描画エリア ---
+# --- 6. 個別描画セクション ---
 st.markdown("---")
 
 # 1. 曲げモーメント図
-st.subheader("📊 曲げモーメント図 (Bending Moment Diagram)")
-[Image of bending moment diagram for a simply supported beam]
-fig_m, ax_m = get_base_plot()
-ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
-ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
-ax_m.set_ylabel("M (kN-m)", fontsize=10, fontweight='bold')
-ax_m.set_ylim(20, -5) # 20固定
-ax_m.text(L/2, M_max/1e6 + 0.
+st.subheader("📊 曲げモーメント図 (BMD)")
+fig_m = create_beam_plot(m_diag/1e6, "forestgreen", "M (kN-m)", 20, -5, M_max/1e6 + 0.5, f"M={M_max/1e6:.2f}\n(σb={sigma_b:.2f})")
+st.pyplot(fig_m)
+
+# 2. せん断力図
+st.subheader("📊 せん断力図 (SFD)")
+fig_s = create_beam_plot(s_diag/1000, "darkorange", "S (kN)", -20, 20, 0, "") 
+# S図は特殊なのでテキストを個別追加
+ax_s = fig_s.get_axes()[0]
+ax_s.text(0, Q_max/1000, f"S={Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
+ax_s.text(L, -Q_max/1000, f"S={-Q_max/1000:.1f}\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
+st.pyplot(fig_s)
+
+# 3. たわみ図
+st.subheader("📊 たわみ図 (Deflection)")
+fig_d = create_beam_plot(np.array([get_delta(x) for x in x_vals]), "blue", "d (mm)", 30, -5, delta_max + 1.0, f"d={delta_max:.1f}")
+ax_d = fig_d.get_axes()[0]
+ax_d.set_xlabel("Position (mm)", fontsize=11)
+st.pyplot(fig_d)
