@@ -1,6 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import numpy as np
+import japanize_matplotlib  # 日本語フォント表示のためのライブラリ
 
 # ページ設定
 st.set_page_config(page_title="木製梁のたわみ計算シミュレーター", layout="wide")
@@ -105,26 +106,34 @@ st.markdown("### Deflection Graph")
 fig, ax = plt.subplots(figsize=(10, 3.5))
 x_vals = np.linspace(0, L, 100)
 
-# 【修正点】マイナスをつけない（Y軸反転で自然に下向きになるため）
+# Y軸反転で自然に下向きになるため、マイナスをつけない
 y_vals = np.array([get_deflection(x) for x in x_vals])
 
 # 塗りつぶし & 線
 ax.fill_between(x_vals, y_vals, 0, color="skyblue", alpha=0.3)
-ax.plot(x_vals, y_vals, color="blue", linewidth=3, label=mode)
+# ラベルも日本語に変更
+ax.plot(x_vals, y_vals, color="blue", linewidth=3, label="たわみ曲線")
 
-# 【修正点】最大点のプロットもプラスの値で指定
+# 最大点のプロット
 ax.plot(L/2, delta_max, "ro", markersize=8)
 # テキスト位置を調整（点の少し下へ）
-ax.text(L/2, delta_max + (delta_max*0.2), f"{delta_max:.2f}mm", 
+ax.text(L/2, delta_max + (delta_max*0.1), f"{delta_max:.2f}mm", 
         color="red", ha="center", fontweight="bold")
 
 # 装飾
-ax.set_title(f"Span: {L}mm / {load_desc} / {selected_material}", fontsize=12)
-ax.set_xlabel("Position (mm)")
-ax.set_ylabel("Deflection (mm)")
+# タイトルも日本語で表示（文字化け解消）
+ax.set_title(f"スパン: {L}mm / {load_desc} / {selected_material}", fontsize=12)
+ax.set_xlabel("位置 (mm)")
+ax.set_ylabel("たわみ (mm)")
 ax.grid(True, linestyle="--", alpha=0.7)
+# 凡例も日本語で表示
 ax.legend(loc="upper right")
-# Y軸を反転（下がプラス＝たわみ方向）
-ax.invert_yaxis()
+
+# 【追加修正点】Y軸の表示範囲を調整して、グラフを画面内にきれいに収める
+# 最大たわみの1.2倍＋少しの余裕を持たせる
+if delta_max > 0:
+    ax.set_ylim(delta_max * 1.2 + 1, -1) # 上限を少しマイナスにして上部に隙間を作る
+else:
+    ax.set_ylim(5, -1) # たわみが0の時のデフォルト範囲
 
 st.pyplot(fig)
