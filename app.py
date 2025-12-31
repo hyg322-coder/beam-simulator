@@ -30,7 +30,9 @@ if selected_label == "任意入力":
     fb = st.sidebar.number_input("fb (N/mm²)", value=10.0)
     fs = st.sidebar.number_input("fs (N/mm²)", value=0.8)
 else:
-    E, fb, fs = material_db[selected_label]["E"], material_db[selected_label]["fb"], material_db[selected_label]["fs"]
+    E = material_db[selected_label]["E"]
+    fb = material_db[selected_label]["fb"]
+    fs = material_db[selected_label]["fs"]
 
 L = st.sidebar.select_slider("L (mm)", options=list(range(910, 6001, 455)), value=3640)
 b = st.sidebar.select_slider("b (mm)", options=[105, 120, 150, 180, 210, 240, 270], value=120)
@@ -60,7 +62,7 @@ else:
 sigma_b, tau = M_max / Z, (1.5 * Q_max) / A
 ratio = int(L / delta_max) if delta_max > 0 else 0
 
-# --- 4. 断面算定結果 (元のレイアウトでOK文字だけ大きく) ---
+# --- 4. 断面算定結果 (元の横並びUI + 巨大OK) ---
 st.subheader("📋 断面算定結果")
 c1, c2, c3 = st.columns(3)
 
@@ -70,7 +72,66 @@ def simple_ok_card(label, value, limit, is_ok):
     status = "OK" if is_ok else "NG"
     st.markdown(f"""
         <div style="background-color: {bg_color}; border-radius: 8px; padding: 12px; text-align: center; border: 1px solid {color}; height: 160px; display: flex; flex-direction: column; justify-content: center;">
-            <div style="font-size: 14px; color: #333; font-weight: bold; margin-bottom: 4px;">{label}</div>
+            <div style="font-size: 14px; color: #333; font-weight: bold; margin-bottom: 2px;">{label}</div>
             <div style="font-size: 18px; font-weight: bold; color: #333;">{value}</div>
-            <div style="font-size: 50px; font-weight: 900; color: {color}; line-height: 1.1; margin: 5px 0;">{status}</div>
-            <div style="font-size: 12px; color
+            <div style="font-size: 50px; font-weight: 900; color: {color}; line-height: 1.1; margin: 4px 0;">{status}</div>
+            <div style="font-size: 12px; color: #666; opacity: 0.8;">{limit}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with c1:
+    simple_ok_card("曲げ応力度検定", f"{sigma_b:.2f} N/mm²", f"(≦{fb:.1f})", sigma_b <= fb)
+with c2:
+    simple_ok_card("せん断応力度検定", f"{tau:.2f} N/mm²", f"(≦{fs:.1f})", tau <= fs)
+with c3:
+    simple_ok_card("撓み検定", f"{delta_max:.2f} mm", f"(1/{ratio})", delta_max <= L/300)
+
+# --- 5. グラフ描画 (元のUI感 + 指定の軸スケール) ---
+st.markdown("### 📊 応力・変形図")
+
+fig, (ax_m, ax_s, ax_d) = plt.subplots(3, 1, figsize=(10, 8.5))
+plt.subplots_adjust(hspace=0.6)
+
+# M図: 20固定
+ax_m.xaxis.set_major_locator(ticker.MultipleLocator(455))
+ax_m.grid(True, linestyle="--", alpha=0.3)
+ax_m.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+ax_m.plot(0, 0, '^k', markersize=10)
+ax_m.plot(L, 0, '^k', markersize=10)
+ax_m.set_title("M (kN-m)", loc='left', fontsize=12, fontweight='bold')
+ax_m.set_xlim(-150, L + 150)
+ax_m.fill_between(x_vals, m_diag/1e6, 0, color="green", alpha=0.15)
+ax_m.plot(x_vals, m_diag/1e6, color="forestgreen", linewidth=3.0)
+ax_m.set_ylim(20, -5) 
+ax_m.text(L/2, (M_max/1e6) + 0.3, f"M={M_max/1e6:.2f}\\n(σb={sigma_b:.2f})", color="forestgreen", ha="center", va="bottom", fontsize=10, fontweight='bold')
+
+# S図: 20固定・右下がり
+ax_s.xaxis.set_major_locator(ticker.MultipleLocator(455))
+ax_s.grid(True, linestyle="--", alpha=0.3)
+ax_s.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+ax_s.plot(0, 0, '^k', markersize=10)
+ax_s.plot(L, 0, '^k', markersize=10)
+ax_s.set_title("S (kN)", loc='left', fontsize=12, fontweight='bold')
+ax_s.set_xlim(-150, L + 150)
+ax_s.fill_between(x_vals, s_diag/1000, 0, color="orange", alpha=0.15)
+ax_s.plot(x_vals, s_diag/1000, color="darkorange", linewidth=3.0)
+ax_s.set_ylim(-20, 20) 
+ax_s.text(0, (Q_max/1000), f"S={Q_max/1000:.1f}\\n(τ={tau:.2f})", color="darkorange", ha="left", va="bottom", fontsize=10, fontweight='bold')
+ax_s.text(L, (-Q_max/1000), f"S={-Q_max/1000:.1f}\\n(τ={tau:.2f})", color="darkorange", ha="right", va="top", fontsize=10, fontweight='bold')
+
+# d図: 30固定
+ax_d.xaxis.set_major_locator(ticker.MultipleLocator(455))
+ax_d.grid(True, linestyle="--", alpha=0.3)
+ax_d.plot([0, L], [0, 0], 'k-', linewidth=1.5)
+ax_d.plot(0, 0, '^k', markersize=10)
+ax_d.plot(L, 0, '^k', markersize=10)
+ax_d.set_title("d (mm)", loc='left', fontsize=12, fontweight='bold')
+ax_d.set_xlim(-150, L + 150)
+y_d_plot = np.array([get_delta(x) for x in x_vals])
+ax_d.fill_between(x_vals, y_d_plot, 0, color="skyblue", alpha=0.15)
+ax_d.plot(x_vals, y_d_plot, color="blue", linewidth=3.0)
+ax_d.set_ylim(30, -5) 
+ax_d.text(L/2, (delta_max + 1.0), f"d={delta_max:.1f}", color="blue", ha="center", va="bottom", fontsize=11, fontweight='bold')
+ax_d.set_xlabel("Position (mm)", fontsize=11)
+
+st.pyplot(fig)
