@@ -61,7 +61,7 @@ with col3:
         st.error(f"判定: NG (1/{limit} オーバー)")
 
 # 4. グラフ描画
-st.subheader("Deflection Graph") # タイトルを英語化
+st.subheader("Deflection Graph")
 
 fig, ax = plt.subplots(figsize=(10, 5))
 
@@ -74,12 +74,10 @@ ax.set_title(f"Span: {L}mm / Section: {b}x{h}mm / E: {E} N/mm2", fontsize=14)
 ax.set_xlabel("Position (mm)", fontsize=12)
 ax.set_ylabel("Deflection (mm)", fontsize=12)
 
-# ★ここがポイント：Y軸の表示範囲を調整
-# たわみが小さくても、最低でも「-25mm」までは画面に表示する設定にしました。
-# これにより、数ミリのたわみなら「ほんの少したわんでいる」ようにリアルに見えます。
-current_limit = -delta_max * 1.5 # 現在のたわみの1.5倍
-view_limit = min(-25, current_limit) # ただし最低でも-25mmまでは確保
-ax.set_ylim(view_limit, 5) # Y軸をセット
+# ★Y軸の表示範囲を調整（たわみが小さくてもペチャンコに見えないようにする）
+current_limit = -delta_max * 1.5 
+view_limit = min(-25, current_limit) # 最低でも-25mmまでは表示
+ax.set_ylim(view_limit, 5)
 
 # グリッドと凡例
 ax.grid(True, linestyle="--", alpha=0.6)
